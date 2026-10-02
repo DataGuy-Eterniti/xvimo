@@ -34,12 +34,14 @@ for n, (_, row) in enumerate(sample.iterrows(), 1):
         "source_type": row["source_type"], "verdict": out.get("verdict"),
         "pred_type": out.get("scam_type"), "confidence": out.get("confidence"),
         "needs_web_check": out.get("needs_web_check"), "needs_escalation": out.get("needs_escalation"),
+        "route": out.get("route"),
         "correct": correct, "latency_s": out.get("latency_s"),
         "input_tokens": out.get("input_tokens"), "output_tokens": out.get("output_tokens"),
         "reason": out.get("reason"), "parse_ok": out.get("parse_ok"),
     })
     mark = "ERR " if correct is None else ("OK  " if correct else "MISS")
-    print(f"[{n:>3}/{len(sample)}] {mark} {row['id']} true={row['label']:<5} -> {out.get('verdict')}: {out.get('reason', '')[:90]}")
+    route = "->ULTRA" if out.get("route") == "escalate" else "       "
+    print(f"[{n:>3}/{len(sample)}] {mark} {route} {row['id']} true={row['label']:<5} -> {out.get('verdict')}: {out.get('reason', '')[:80]}")
     time.sleep(PAUSE_SECONDS)
 
 res = pd.DataFrame(records)
@@ -57,7 +59,9 @@ print(f"Scams caught (recall)   : {scam['correct'].mean():.0%}  ({scam['correct'
 print(f"False alarms on legit   : {1 - legit['correct'].mean():.0%}  ({(~legit['correct']).sum()}/{len(legit)})")
 print(f"JSON parsed correctly   : {valid['parse_ok'].mean():.0%}")
 print(f"Average latency         : {valid['latency_s'].mean():.1f} s")
-print(f"Would escalate to Ultra : {valid['needs_escalation'].fillna(False).astype(bool).mean():.0%}")
+final = valid[valid["route"] == "final"]
+print(f"Decided by Nano alone   : {len(final) / max(len(valid), 1):.0%}  -> accuracy {final['correct'].mean() if len(final) else 0:.0%}")
+print(f"Sent to Tavily + Ultra  : {(valid['route'] == 'escalate').mean():.0%}")
 for src, grp in valid.groupby("source_type"):
     print(f"Accuracy on {src:<20}: {grp['correct'].mean():.0%} ({len(grp)} rows)")
 print(f"\nFull results saved to {out_path}")

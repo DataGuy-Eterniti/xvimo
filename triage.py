@@ -42,16 +42,62 @@ Scam type definitions (pick the closest):
 - fake_giveaway: you "won" a prize or promo and must pay or share details to claim it.
 - romance: online relationship that leads to requests for money or gift fees.
 
+CORE RULE: A message is only "suspicious" or "likely_scam" if it ASKS the reader to do something risky
+(send money or a fee, share a PIN/OTP/BVN/password/card details, click a link to log in or pay, call an unknown
+number about their account, attend an unverified paid "interview") OR promises unrealistic gains.
+Missing details, short or vague text, informal tone, typos, or an unfamiliar sender are NOT red flags by themselves.
+If nothing risky is requested and nothing unrealistic is promised, the verdict is "no_red_flags".
+
+Known LEGITIMATE patterns (verdict "no_red_flags" unless they also break the core rule):
+- OTP or verification codes ("[CODE] is your code, do not share it"): legitimate. Only suspicious if someone asks you to SEND or FORWARD the code to them.
+- Bank credit, debit, reversal or balance alerts that request no action and contain no link or phone number to call.
+- Telco notices: data or airtime purchases, renewals, expiry reminders, airtime borrowing deducted on next recharge, USSD codes like *323#.
+- Delivery, ride, food order, utility token, subscription and tax payment confirmations.
+- A person you dealt with asking to be paid for goods or work already done (tailor, mechanic, repairer, shop).
+- Bank or company messages that WARN about fraud ("we will never ask for your PIN").
+- Normal chats with family, friends, church, mosque, school or community groups.
+
 Guidance:
-- Genuine bank alerts, OTP codes, delivery updates, utility tokens and normal family or business chats are usually legitimate.
-- A legitimate message may WARN about fraud (e.g. "we will never ask for your PIN"); that is not a scam.
 - Red flags include impossible or guaranteed returns, upfront fees to receive money or a loan or a job,
   urgency and limited slots, requests for PIN/OTP/BVN or card details, look-alike links,
   someone claiming a new number who asks for money, and threats.
 - Use "suspicious" when there are some warning signs but you cannot be sure.
-- Placeholders like [NAME], [PHONE], [ACCOUNT] and [AMOUNT] are redactions; ignore them as evidence."""
+- Placeholders like [NAME], [PHONE], [ACCOUNT], [EMAIL] and [AMOUNT] hide private details. The ACTION around them
+  still counts: "call [PHONE] to reactivate your card" is a request to call an unknown number about your account.
+- Unsolicited job, interview, "aptitude test", "career chat" or "work brief" invitations from firms the reader never
+  applied to are a well-known Nigerian scam pattern (they lead to fees or pyramid schemes). Mark these at least
+  "suspicious", even when no money is requested yet.
+- Any message saying an account, ATM card or BVN is blocked, deactivated or needs updating, and asking the reader
+  to call, click or reply, is at least "suspicious"."""
 
 ALLOWED_VERDICTS = {"likely_scam", "suspicious", "no_red_flags"}
+CONFIDENT = 0.75  # Nano decides alone only when it is this confident
+
+
+# Safety net: if the message touches a high-risk topic, Nano may not clear it alone.
+RISK_PATTERN = re.compile(
+    r"interview|recruit|aptitude|shortlist|vacanc|bvn|atm|block|deactivat|suspend|reactivat|invest|"
+    r"profit|return|roi|loan|grant|won|win |prize|promo|bonus|giveaway|urgent|click|http|www\.|"
+    r"verify|password|pin\b|otp|code|send .*money|fee|pay ",
+    re.I,
+)
+
+
+def route_for(result: dict, message: str = "") -> str:
+    """Decide in code (not by the model) whether Nano's answer is final or needs Tavily + Ultra.
+
+    A missed scam is worse than a false alarm, so Nano can only clear a message as safe on its own
+    when it is confident AND the message avoids every high-risk topic. Otherwise Ultra double-checks.
+    """
+    if result.get("verdict") == "no_red_flags" and RISK_PATTERN.search(message or ""):
+        return "escalate"
+    try:
+        conf = float(result.get("confidence", 0))
+    except (TypeError, ValueError):
+        conf = 0.0
+    if result.get("verdict") in ("likely_scam", "no_red_flags") and conf >= CONFIDENT:
+        return "final"
+    return "escalate"
 
 
 def _extract_json(text: str) -> dict:
@@ -90,7 +136,7 @@ def _call_model(message: str):
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"Message to check:\n\"\"\"\n{message}\n\"\"\""},
     ]
-    return _create(dict(model=NANO_MODEL, messages=messages, temperature=0.2, max_tokens=1500))
+    return _create(dict(model=NANO_MODEL, messages=messages, temperature=0.0, max_tokens=1500))
 
 
 def triage(message: str) -> dict:
@@ -108,6 +154,7 @@ def triage(message: str) -> dict:
     except (ValueError, json.JSONDecodeError):
         result = {"verdict": "suspicious", "reason": "Model reply could not be parsed", "parse_ok": False}
 
+    result["route"] = route_for(result, message)
     usage = getattr(response, "usage", None)
     result["latency_s"] = latency
     result["input_tokens"] = getattr(usage, "prompt_tokens", None)
