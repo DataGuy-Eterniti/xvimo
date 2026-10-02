@@ -29,7 +29,9 @@ Analyse it and reply with ONLY a JSON object, no other text, using exactly these
   "red_flags": [short phrases, at most 5],
   "needs_web_check": true if an organization, platform or link should be verified online,
   "needs_escalation": true if the case is ambiguous and needs deeper reasoning,
-  "reason": one plain sentence a non-technical person can understand
+  "reason": one plain sentence a non-technical person can understand,
+  "reply": a short WhatsApp-style message to the user (max 50 words), written in the SAME language as the message
+           (Pidgin for Pidgin, Yoruba for Yoruba, etc.), stating the verdict, the key reason and one safety tip
 }
 
 Scam type definitions (pick the closest):
