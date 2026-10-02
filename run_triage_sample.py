@@ -28,7 +28,7 @@ for n, (_, row) in enumerate(sample.iterrows(), 1):
     except Exception as exc:  # network or API error: record it and keep going
         out = {"verdict": "error", "reason": str(exc)[:200], "parse_ok": False}
     flagged = out["verdict"] in ("likely_scam", "suspicious")
-    correct = (row["label"] == "scam") == flagged
+    correct = None if out["verdict"] == "error" else (row["label"] == "scam") == flagged
     records.append({
         "id": row["id"], "label": row["label"], "true_type": row["scam_type"],
         "source_type": row["source_type"], "verdict": out.get("verdict"),
@@ -38,7 +38,7 @@ for n, (_, row) in enumerate(sample.iterrows(), 1):
         "input_tokens": out.get("input_tokens"), "output_tokens": out.get("output_tokens"),
         "reason": out.get("reason"), "parse_ok": out.get("parse_ok"),
     })
-    mark = "OK " if correct else "MISS"
+    mark = "ERR " if correct is None else ("OK  " if correct else "MISS")
     print(f"[{n:>3}/{len(sample)}] {mark} {row['id']} true={row['label']:<5} -> {out.get('verdict')}: {out.get('reason', '')[:90]}")
     time.sleep(PAUSE_SECONDS)
 
@@ -47,7 +47,8 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 out_path = os.path.join(RESULTS_DIR, "triage_sample.csv")
 res.to_csv(out_path, index=False)
 
-valid = res[res["verdict"] != "error"]
+valid = res[res["verdict"] != "error"].copy()
+valid["correct"] = valid["correct"].astype(bool)
 scam, legit = valid[valid["label"] == "scam"], valid[valid["label"] == "legit"]
 print("\n========== NANO TRIAGE SUMMARY ==========")
 print(f"Messages checked        : {len(valid)} (errors: {len(res) - len(valid)})")

@@ -5,7 +5,8 @@ import re
 import time
 
 from dotenv import load_dotenv
-from openai import OpenAI, BadRequestError
+from openai import (APIConnectionError, BadRequestError, InternalServerError, OpenAI,
+                    RateLimitError)
 
 load_dotenv(override=True)
 
@@ -31,6 +32,16 @@ Analyse it and reply with ONLY a JSON object, no other text, using exactly these
   "reason": one plain sentence a non-technical person can understand
 }
 
+Scam type definitions (pick the closest):
+- ponzi: invest or deposit money to receive guaranteed, high or fast returns, often with recruiting or "limited slots".
+- advance_fee: pay a fee to RECEIVE money you were promised (inheritance, grant, package, visa, scholarship).
+- fake_loan: pay a fee to get a loan, or threats about an unpaid loan.
+- fake_job: job, interview or "career chat" invitation from an unknown firm, or a fee to get a job.
+- impersonation: pretends to be a bank, CBN, EFCC, a relative with a "new number", or someone who "sent money by mistake".
+- phishing_link: a link that asks for login, card, BVN, NIN or OTP details.
+- fake_giveaway: you "won" a prize or promo and must pay or share details to claim it.
+- romance: online relationship that leads to requests for money or gift fees.
+
 Guidance:
 - Genuine bank alerts, OTP codes, delivery updates, utility tokens and normal family or business chats are usually legitimate.
 - A legitimate message may WARN about fraud (e.g. "we will never ask for your PIN"); that is not a scam.
@@ -52,19 +63,34 @@ def _extract_json(text: str) -> dict:
     return json.loads(text[start : end + 1])
 
 
+RETRY_WAITS = [5, 15, 30]  # seconds to wait before each retry when the server is busy
+
+
+def _create(params: dict):
+    """Call the API, retrying when the server is overloaded (429/503) or the connection drops."""
+    for attempt in range(len(RETRY_WAITS) + 1):
+        try:
+            try:
+                # Ask Nano to skip long reasoning for speed; fall back if the option is not supported.
+                return client.chat.completions.create(
+                    **params, extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+                )
+            except BadRequestError:
+                return client.chat.completions.create(**params)
+        except (RateLimitError, InternalServerError, APIConnectionError):
+            if attempt == len(RETRY_WAITS):
+                raise
+            wait = RETRY_WAITS[attempt]
+            print(f"      server busy, retrying in {wait}s...")
+            time.sleep(wait)
+
+
 def _call_model(message: str):
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"Message to check:\n\"\"\"\n{message}\n\"\"\""},
     ]
-    params = dict(model=NANO_MODEL, messages=messages, temperature=0.2, max_tokens=1500)
-    try:
-        # Ask Nano to skip long reasoning for speed; fall back if the option is not supported.
-        return client.chat.completions.create(
-            **params, extra_body={"chat_template_kwargs": {"enable_thinking": False}}
-        )
-    except BadRequestError:
-        return client.chat.completions.create(**params)
+    return _create(dict(model=NANO_MODEL, messages=messages, temperature=0.2, max_tokens=1500))
 
 
 def triage(message: str) -> dict:
