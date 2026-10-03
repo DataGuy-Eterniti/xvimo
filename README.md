@@ -236,3 +236,198 @@ Released under the [MIT License](LICENSE).
 ## Acknowledgements
 
 Built for the Nebius x NVIDIA Global AI Hackathon with NVIDIA Nemotron open models and Tavily search. Nigerian SMS samples originate from Data Science Nigeria research data; legitimate SMS samples from the UCI SMS Spam Collection.
+
+---
+---
+
+# Progress update — 3 October 2026
+
+*This section is added on top of the Milestone 1 report above, which is left unchanged as a record.*
+
+## Summary
+
+Today Xvimo went from a terminal script to a working product: the **Ultra investigator agent** is built, Xvimo is **live on WhatsApp**, and an **admin dashboard** reports usage, routing, cost and accuracy in real time.
+
+| Milestone | Status |
+|---|---|
+| 1 · Nano triage + safety-net routing | ✅ Done (reported above) |
+| 2 · Ultra investigator agent with Tavily tools | ✅ Done |
+| 3 · Live on WhatsApp | ✅ Done |
+| 4 · Admin dashboard | ✅ Done |
+| Deploy on Nebius Token Factory | ⏳ Waiting for platform access |
+
+## Milestone 2 — the Ultra investigator agent
+
+**Model:** `nvidia/nemotron-3-ultra-550b-a55b` · **Tools:** `web_search`, `search_regulators` (Tavily)
+
+When triage escalates a message, Nemotron Ultra receives it with two tools and decides for itself what to verify:
+
+- `web_search` — the open web: news, complaints, company sites, forums
+- `search_regulators` — only official Nigerian sources: SEC, CBN, EFCC, FCCPC, NCC, NIMC, CAC and NDIC
+
+It writes its own queries, searches again if the evidence is thin (up to 3 rounds), and returns a verdict, a plain-language reason, cited evidence and a ready-to-send reply **in the user's language**.
+
+**Safeguards**
+
+- **No invented sources.** Every cited URL is checked against the pages the agent actually retrieved; anything else is removed and counted.
+- **Tool-calling fallback.** If an endpoint does not support native tool calling, the agent switches to a JSON-action protocol automatically. On the NVIDIA API, native tool calling works.
+- **Early stopping.** The agent is told to stop once it has solid evidence, which keeps latency and credit use down.
+
+**First end-to-end result — unseen messages (seed 7)**
+
+| Metric | Result |
+|---|---|
+| Messages | 10 (5 scam, 5 legit), not used for prompt tuning |
+| Final accuracy | **100%** |
+| Scams caught | **100%** (5/5) |
+| False alarms | **0%** (0/5) |
+| Decided by Nano | 60% · avg 4.4 s |
+| Decided by Ultra agent | 40% · **100% accurate** · avg 33.9 s |
+| Searches per agent case | 3.0 (before early stopping was added) |
+| Verified citations per agent case | 1.8 |
+
+Notable catches: a BVN message using a **2015 deadline**, a "mummy send money" **child impersonation**, and a fake Nigerian entity posing as **ConocoPhillips**.
+
+> Ten messages is a promising first signal, not proof. The full 300-message benchmark will be run once on the final pipeline.
+
+## Milestone 3 — live on WhatsApp
+
+A real fake-CBN message sent from a phone:
+
+> *Dear Customer: CBN Has block your ATM Debit CARD/ACCOUNT due to INCOMPLETE BVN registration, kindly call our help line…*
+
+Xvimo replied "🔍 Investigating…", then:
+
+> 🚨 **LIKELY SCAM** — pretends to be from CBN, uses a hidden phone number; CBN never blocks cards by SMS or asks you to call personal lines. Contact your bank using the number on your card.
+> **Evidence:** CBN's official fraud-awareness page — cbn.gov.ng/supervision/cpdfraudandscam.html
+
+Total time: about one minute, entirely inside WhatsApp.
+
+**How the bot works**
+
+- Replies to Meta/the provider instantly, then runs the pipeline in the background.
+- Quick Nano verdicts get one reply; slow agent investigations first get an "Investigating…" notice.
+- Duplicate deliveries are ignored; `hi` / `help` returns a welcome message.
+
+### Messaging provider — decision log
+
+| Provider | Outcome |
+|---|---|
+| Meta WhatsApp Cloud API (test number) | Account locked by Meta's automated checks (error 131031) after the first test messages. Platform limit due to lift automatically on 6 Oct; review requested. Kept as backup. |
+| Twilio WhatsApp sandbox | Receives messages, but the trial requires content templates for replies (21654), and templates are blocked on trial accounts (20003). Dropped. |
+| Vonage Messages sandbox | Signup phone verification failed. Dropped. |
+| **360dialog sandbox** | ✅ **In use.** No signup form — the API key is issued over WhatsApp. Free-text replies work. |
+
+The core pipeline is independent of the messaging provider, so switching providers only changes the thin bot layer.
+
+## Milestone 4 — admin dashboard
+
+A protected operations dashboard at `/admin?token=<ADMIN_TOKEN>`, designed around what this hackathon's judges assess.
+
+| Judging criterion | What the dashboard shows |
+|---|---|
+| Technological implementation | Live routing between Nano and the Ultra agent; agent tool usage; invented citations removed |
+| Potential impact | Messages checked and flagged; scam types and languages people actually send |
+| Quality of the idea | Cost of tiered routing vs. sending everything to the large model |
+| Design | A coherent operations view of the whole product |
+
+**Sections:** routing flow · key figures · accuracy (tuning vs. unseen benchmark) · speed and cost · scam types · languages · investigator tool usage · recent checks · build progress · tech stack · Nebius status.
+
+**Privacy:** each check is logged to `data/events.jsonl` (git-ignored) with only the sender's last four digits, and long numbers in message previews are masked. User text is escaped before display.
+
+**Cost figures are estimates** until real Nebius Token Factory prices are set in `.env` (`PRICE_NANO_IN`, `PRICE_NANO_OUT`, `PRICE_ULTRA_IN`, `PRICE_ULTRA_OUT`, USD per 1M tokens).
+
+## Current architecture
+
+```mermaid
+flowchart LR
+    P[User on WhatsApp] -->|360dialog sandbox| B[Xvimo bot<br/>FastAPI]
+    B --> N[Nemotron 3 Nano Omni<br/>triage]
+    N -->|confident, low-risk| R[Reply]
+    N -->|risky or uncertain| A[Nemotron 3 Ultra agent]
+    A <-->|web_search / search_regulators| T[Tavily]
+    A --> R
+    R --> P
+    B --> L[(Event log)]
+    L --> D[Admin dashboard]
+```
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Triage model | NVIDIA Nemotron 3 Nano Omni (30B, A3B) |
+| Investigator model | NVIDIA Nemotron 3 Ultra (550B, A55B), native tool calling |
+| Web evidence | Tavily Search (open web + regulator domains) |
+| Inference | NVIDIA API catalog today → **Nebius Token Factory** for the final build (OpenAI-compatible, `.env` switch) |
+| Messaging | WhatsApp via 360dialog sandbox (Meta Cloud API as backup) |
+| Backend | Python, FastAPI, Uvicorn |
+| Public URL (dev) | Cloudflare Tunnel |
+| Data | 300-message labelled, redacted benchmark |
+
+## Analysis
+
+**What is working well**
+
+- **Asymmetric routing pays off.** Nano clears simple messages in ~4 s; anything touching a high-risk topic gets a second opinion. No scam has been cleared by Nano alone since the safety net was added.
+- **The agent behaves like an investigator.** It chooses the regulator tool for bank and investment claims, cites official sources, and catches details a static classifier would miss (dates, impersonated companies).
+- **Provider independence.** Model provider and messaging provider are both swappable without touching the pipeline — proven in practice by four messaging providers in one day.
+
+**Risks and gaps**
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| No Nebius access yet | Submission must run on Nebius | Organisers contacted; code needs only a `.env` change; follow up 5 Oct |
+| Agent latency (~25–35 s) | Slower replies on hard cases | Early stopping added; progress message sent to user |
+| Small evaluation samples | Numbers may be optimistic | Full 300-message benchmark on the final pipeline |
+| Sandbox messaging limits | Only test numbers can message Xvimo | Web demo page planned for judges |
+| Free credit budgets | Limited test runs | Small samples now; one full benchmark at the end |
+
+## Platform status — Nebius
+
+Nebius Token Factory requires billing setup, and Nigeria is not in its billing-country list. A Hong Kong–issued card was declined by Stripe. The organisers have been contacted for a supported route. Until then, the same Nemotron models run through NVIDIA's API. Moving to Nebius means changing four lines in `.env`; the dashboard's platform badge switches automatically once `LLM_BASE_URL` points at Token Factory.
+
+## Running Xvimo locally — one command
+
+```bash
+python run_local.py
+```
+
+This starts the bot, opens a Cloudflare tunnel, registers the new webhook URL with 360dialog, and prints the dashboard link. `Ctrl + C` stops everything.
+
+Additional `.env` entries:
+
+```env
+D360_API_KEY=your_360dialog_sandbox_key
+ADMIN_TOKEN=a_long_random_password
+```
+
+## Project structure (updated)
+
+```
+xvimo/
+├── assets/                  # logo and media
+├── data/                    # benchmark + events.jsonl (private, git-ignored)
+├── results/                 # evaluation outputs (git-ignored)
+├── triage.py                # Layer 1: Nemotron Nano triage + routing
+├── investigator.py          # Layer 2: Nemotron Ultra agent with Tavily tools
+├── xvimo.py                 # end-to-end pipeline + command-line checker
+├── dialog360_bot.py         # WhatsApp bot (360dialog sandbox)
+├── whatsapp_bot.py          # WhatsApp bot (Meta Cloud API, backup)
+├── events.py                # privacy-preserving check log
+├── dashboard.py             # admin dashboard API
+├── dashboard.html           # admin dashboard page
+├── run_local.py             # one-command local launcher
+├── run_triage_sample.py     # triage evaluation
+├── run_pipeline_sample.py   # end-to-end evaluation
+├── test_setup.py            # connectivity check
+└── requirements.txt
+```
+
+## Next steps
+
+- [ ] Web demo page — one-click demo URL for judges
+- [ ] Screenshot checks with Nemotron Nano Omni
+- [ ] Deploy on Nebius Serverless once Token Factory access is granted
+- [ ] Full 300-message benchmark; publish results here
+- [ ] Demo video and Devpost submission (deadline 30 Oct 2026)

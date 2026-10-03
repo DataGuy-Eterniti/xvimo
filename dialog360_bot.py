@@ -14,6 +14,9 @@ import requests
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, Request
 
+from dashboard import router as dashboard_router
+from events import log_check
+
 load_dotenv(override=True)
 
 API_KEY = os.getenv("D360_API_KEY")
@@ -62,6 +65,7 @@ def extract_messages(data: dict) -> list:
 
 # ---------------------------------------------------------------- FastAPI app
 app = FastAPI(title="Xvimo WhatsApp bot (360dialog sandbox)")
+app.include_router(dashboard_router)
 _seen = OrderedDict()
 _seen_lock = threading.Lock()
 
@@ -104,7 +108,9 @@ def handle_text(sender: str, text: str) -> None:
             send_text(sender, "🔍 Investigating this one with web search… give me up to a minute.")
             result, who = investigate(text, first), "ultra_agent"
         send_text(sender, format_reply(result, who))
-        print(f"[{sender[-4:]}] {result.get('verdict')} via {who} in {round(time.time() - started, 1)}s")
+        elapsed = time.time() - started
+        log_check("whatsapp", sender, text, first, result, who, elapsed)
+        print(f"[{sender[-4:]}] {result.get('verdict')} via {who} in {round(elapsed, 1)}s")
     except Exception as exc:
         print("Pipeline error:", exc)
         send_text(sender, "Sorry, I couldn't finish checking that right now. Please try again in a moment.")

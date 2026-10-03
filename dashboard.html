@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xvimo · Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #060A13; --deep: #0A1220; --line: #182540; --text: #E7EEF8; --muted: #8A9CB8;
+    --cyan: #00E5FF; --green: #39FF88; --red: #FF5C72; --amber: #FFC24B;
+    --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--ink); color: var(--text); font-family: var(--font); }
+  body { font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  a { color: var(--cyan); }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 64px; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 22px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .brand { display: flex; align-items: baseline; gap: 14px; }
+  .wordmark { font-size: 28px; font-weight: 700; letter-spacing: 0.02em; }
+  .wordmark .x { background: linear-gradient(90deg, var(--cyan), var(--green)); -webkit-background-clip: text;
+    background-clip: text; color: transparent; }
+  .brand .sub { color: var(--muted); font-size: 15px; }
+  .platform { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13.5px; }
+  .pill { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; color: var(--muted); }
+  .pill b { color: var(--text); font-weight: 600; }
+  .pill.wait { border-color: rgba(255,194,75,.45); color: var(--amber); }
+  .pill.ok { border-color: rgba(57,255,136,.45); color: var(--green); }
+
+  /* hero: routing flow */
+  .hero { padding: 40px 0 8px; }
+  .hero h1 { font-size: clamp(26px, 3.4vw, 38px); line-height: 1.15; margin: 0 0 8px; font-weight: 600; max-width: 30ch; }
+  .hero p { color: var(--muted); margin: 0; max-width: 70ch; }
+  .flow { width: 100%; height: auto; margin-top: 24px; display: block; }
+  .flow text { font-family: var(--font); fill: var(--text); }
+  .flow .muted { fill: var(--muted); }
+  .flow .stream { fill: none; stroke-linecap: round; }
+  @media (prefers-reduced-motion: no-preference) {
+    .flow .stream { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: draw 1.6s ease-out forwards; }
+    .flow .stream.late { animation-delay: .5s; }
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  /* figure strip */
+  .strip { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line); margin: 28px 0 8px; }
+  .fig { padding: 18px 18px 16px; border-left: 1px solid var(--line); }
+  .fig:first-child { border-left: 0; padding-left: 0; }
+  .fig .v { font-size: 30px; font-weight: 600; line-height: 1.1; }
+  .fig .k { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+
+  section { padding-top: 40px; }
+  h2 { font-size: 21px; font-weight: 600; margin: 0 0 4px; }
+  .lede { color: var(--muted); margin: 0 0 18px; max-width: 72ch; font-size: 14.5px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+
+  /* bars */
+  .bars { display: grid; gap: 10px; }
+  .bar { display: grid; grid-template-columns: 150px 1fr 56px; align-items: center; gap: 12px; font-size: 14px; }
+  .bar .track { height: 10px; background: var(--deep); border-radius: 5px; overflow: hidden; }
+  .bar .fill { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--cyan), var(--green)); }
+  .bar .fill.red { background: var(--red); } .bar .fill.amber { background: var(--amber); }
+  .bar .n { text-align: right; color: var(--muted); }
+
+  /* benchmark table */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.num, th.num { text-align: right; }
+  .good { color: var(--green); } .warn { color: var(--amber); } .bad { color: var(--red); }
+  .note { color: var(--muted); font-size: 13px; margin-top: 10px; }
+
+  .verdict { font-weight: 600; white-space: nowrap; }
+  .verdict.likely_scam { color: var(--red); } .verdict.suspicious { color: var(--amber); } .verdict.no_red_flags { color: var(--green); }
+  .preview { color: var(--muted); max-width: 46ch; }
+  .scroll { overflow-x: auto; }
+
+  /* milestones */
+  .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  .steps li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 6px; border: 2px solid var(--muted); }
+  .dot.done { background: var(--green); border-color: var(--green); }
+  .dot.blocked { border-color: var(--amber); }
+  .steps .t { font-weight: 500; } .steps .d { color: var(--muted); font-size: 13.5px; }
+
+  .empty { border: 1px dashed var(--line); border-radius: 10px; padding: 22px; color: var(--muted); }
+  footer { color: var(--muted); font-size: 13px; padding-top: 36px; }
+
+  @media (max-width: 860px) {
+    .two { grid-template-columns: 1fr; gap: 32px; }
+    .strip { grid-template-columns: repeat(2, 1fr); }
+    .fig { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); }
+    .bar { grid-template-columns: 110px 1fr 44px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="wordmark"><span class="x">X</span>VIMO</span><span class="sub">Operations</span></div>
+    <div class="platform" id="platform"></div>
+  </header>
+
+  <div class="hero">
+    <h1 id="headline">Loading live checks…</h1>
+    <p>Every message is read by Nemotron Nano first. Clear cases are answered in seconds; anything risky or uncertain goes to the Nemotron Ultra agent, which searches the web and cites its sources.</p>
+    <svg class="flow" id="flow" viewBox="0 0 1100 300" role="img" aria-label="Routing of checks between Nano and the Ultra agent"></svg>
+  </div>
+
+  <div class="strip" id="strip"></div>
+
+  <div class="two">
+    <section>
+      <h2>Accuracy</h2>
+      <p class="lede">Measured on the labelled benchmark. The tuning sample is optimistic; the unseen sample is the honest number.</p>
+      <div id="bench"></div>
+    </section>
+    <section>
+      <h2>Speed and cost</h2>
+      <p class="lede">What tiered routing saves compared with sending every message to the large model.</p>
+      <div id="cost"></div>
+    </section>
+  </div>
+
+  <div class="two">
+    <section>
+      <h2>What people are checking</h2>
+      <p class="lede">Scam types among flagged messages.</p>
+      <div class="bars" id="types"></div>
+    </section>
+    <section>
+      <h2>Languages</h2>
+      <p class="lede">Replies are written in the language the user wrote in.</p>
+      <div class="bars" id="langs"></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>The investigator at work</h2>
+    <p class="lede">How the Ultra agent uses its tools. Citations are only kept if the agent actually retrieved that page.</p>
+    <div class="two" id="agent"></div>
+  </section>
+
+  <section>
+    <h2>Recent checks</h2>
+    <p class="lede">Senders are shown by their last four digits; long numbers in messages are masked.</p>
+    <div class="scroll" id="recent"></div>
+  </section>
+
+  <div class="two">
+    <section>
+      <h2>Build progress</h2>
+      <p class="lede">Nebius x NVIDIA Global AI Hackathon · deadline 30 October 2026.</p>
+      <ol class="steps" id="steps"></ol>
+    </section>
+    <section>
+      <h2>Tech stack</h2>
+      <p class="lede">Every model call goes through an OpenAI-compatible endpoint, so moving to Nebius is a configuration change.</p>
+      <div class="scroll" id="stack"></div>
+    </section>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const token = new URLSearchParams(location.search).get("token") || "";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct = v => v == null ? "—" : `${v}%`;
+const sec = v => v == null ? "—" : `${Number(v).toFixed(1)} s`;
+const label = { likely_scam: "Likely scam", suspicious: "Suspicious", no_red_flags: "No red flags",
+  web_search: "Open web search", search_regulators: "Regulator sites" };
+
+function bars(el, obj, cls = "") {
+  const entries = Object.entries(obj || {}).filter(([k]) => k && k !== "null").sort((a, b) => b[1] - a[1]);
+  if (!entries.length) { el.innerHTML = `<div class="empty">Nothing here yet.</div>`; return; }
+  const max = Math.max(...entries.map(e => e[1]));
+  el.innerHTML = entries.map(([k, v]) => `
+    <div class="bar"><span>${esc(label[k] || k.replace(/_/g, " "))}</span>
+      <span class="track"><span class="fill ${cls}" style="width:${(100 * v / max).toFixed(1)}%"></span></span>
+      <span class="n">${v}</span></div>`).join("");
+}
+
+function flow(live) {
+  const svg = document.getElementById("flow");
+  const n = live.total, a = live.routing.agent, b = live.routing.nano;
+  if (!n) {
+    svg.innerHTML = `<text x="0" y="60" class="muted" font-size="16">No checks yet. Send a message to the Xvimo WhatsApp number and it will appear here.</text>`;
+    return;
+  }
+  const w = v => Math.max(4, 70 * v / n);
+  const lat = live.latency;
+  svg.innerHTML = `
+    <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#00E5FF"/><stop offset="1" stop-color="#39FF88"/></linearGradient></defs>
+    <text x="0" y="132" font-size="46" font-weight="700">${n}</text>
+    <text x="0" y="160" class="muted" font-size="15">messages checked</text>
+    <path class="stream" d="M200 140 C 360 140, 360 70, 520 70" stroke="url(#g)" stroke-width="${w(b)}" stroke-opacity=".9"/>
+    <path class="stream late" d="M200 140 C 360 140, 360 215, 520 215" stroke="url(#g)" stroke-width="${w(a)}" stroke-opacity=".55"/>
+    <text x="540" y="64" font-size="20" font-weight="600">${b} settled by Nano</text>
+    <text x="540" y="88" class="muted" font-size="14">avg ${sec(lat.nano)} · answered without web search</text>
+    <text x="540" y="209" font-size="20" font-weight="600">${a} investigated by the Ultra agent</text>
+    <text x="540" y="233" class="muted" font-size="14">avg ${sec(lat.agent)} · ${(live.agent.avg_searches ?? 0).toFixed(1)} searches and ${(live.agent.avg_citations ?? 0).toFixed(1)} verified citations per case</text>`;
+}
+
+function render(d) {
+  const L = d.live, P = d.platform;
+  document.getElementById("platform").innerHTML = `
+    <span class="pill">Models on <b>${esc(P.on_nebius ? "Nebius Token Factory" : P.inference_now)}</b></span>
+    <span class="pill ${P.on_nebius ? "ok" : "wait"}">Nebius: ${esc(P.on_nebius ? "live" : P.nebius_status)}</span>`;
+
+  const flagged = (L.verdicts.likely_scam || 0) + (L.verdicts.suspicious || 0);
+  document.getElementById("headline").textContent = L.total
+    ? `${flagged} of ${L.total} messages flagged as risky so far.`
+    : "Waiting for the first check.";
+  flow(L);
+
+  const share = L.total ? Math.round(100 * L.routing.nano / L.total) : null;
+  const figs = [
+    [L.total, "checks run"],
+    [flagged, "flagged as scam or suspicious"],
+    [share == null ? "—" : share + "%", "settled by the small model"],
+    [sec(L.latency.nano), "average Nano reply"],
+    [L.cost.saving_pct == null ? "—" : L.cost.saving_pct + "%", "cheaper than all-Ultra"],
+  ];
+  document.getElementById("strip").innerHTML = figs.map(([v, k]) => `<div class="fig"><div class="v">${esc(v)}</div><div class="k">${esc(k)}</div></div>`).join("");
+
+  const B = d.benchmarks, rows = [];
+  const cls = (v, goodAbove) => v == null ? "" : (v >= goodAbove ? "good" : "warn");
+  if (B.triage) rows.push(["Nano triage · tuning sample", B.triage]);
+  if (B.pipeline) rows.push(["Full pipeline · unseen sample", B.pipeline]);
+  document.getElementById("bench").innerHTML = rows.length ? `
+    <table><thead><tr><th>Run</th><th class="num">Msgs</th><th class="num">Accuracy</th><th class="num">Scams caught</th><th class="num">False alarms</th></tr></thead>
+    <tbody>${rows.map(([name, r]) => `<tr><td>${esc(name)}<div class="note">${esc(r.when)}</div></td>
+      <td class="num">${r.n}</td><td class="num ${cls(r.accuracy, 90)}">${pct(r.accuracy)}</td>
+      <td class="num ${cls(r.recall, 95)}">${pct(r.recall)}</td>
+      <td class="num ${r.false_alarm != null && r.false_alarm <= 10 ? "good" : "warn"}">${pct(r.false_alarm)}</td></tr>`).join("")}</tbody></table>
+    ${B.triage ? `<p class="note">Nano answered ${pct(B.triage.nano_final_share)} of the tuning sample on its own, with ${pct(B.triage.nano_final_accuracy)} accuracy on those.</p>` : ""}`
+    : `<div class="empty">Run <code>python run_triage_sample.py 25</code> or <code>python run_pipeline_sample.py 5 7</code> to fill this in.</div>`;
+
+  const C = L.cost;
+  document.getElementById("cost").innerHTML = L.total ? `
+    <table><tbody>
+      <tr><td>Average reply, Nano path</td><td class="num">${sec(L.latency.nano)}</td></tr>
+      <tr><td>Average reply, agent path</td><td class="num">${sec(L.latency.agent)}</td></tr>
+      <tr><td>Model cost of all checks</td><td class="num">$${C.actual.toFixed(5)}</td></tr>
+      <tr><td>Same checks if every one used the Ultra agent</td><td class="num">$${C.all_ultra.toFixed(5)}</td></tr>
+      <tr><td>Saving from tiered routing</td><td class="num good">${pct(C.saving_pct)}</td></tr>
+    </tbody></table>
+    <p class="note">${C.estimated ? "Cost uses estimated per-token prices; set PRICE_NANO_IN, PRICE_NANO_OUT, PRICE_ULTRA_IN and PRICE_ULTRA_OUT in .env to Nebius Token Factory list prices." : "Cost uses the per-token prices set in .env."}</p>`
+    : `<div class="empty">Costs appear after the first live check.</div>`;
+
+  bars(document.getElementById("types"), L.scam_types, "red");
+  bars(document.getElementById("langs"), L.languages);
+
+  const A = L.agent;
+  document.getElementById("agent").innerHTML = `
+    <div><div class="bars" id="tools"></div></div>
+    <div><table><tbody>
+      <tr><td>Cases investigated</td><td class="num">${L.routing.agent}</td></tr>
+      <tr><td>Average searches per case</td><td class="num">${A.avg_searches ?? "—"}</td></tr>
+      <tr><td>Average verified citations</td><td class="num">${A.avg_citations ?? "—"}</td></tr>
+      <tr><td>Invented citations removed</td><td class="num">${A.dropped_citations}</td></tr>
+    </tbody></table></div>`;
+  bars(document.getElementById("tools"), A.tools);
+
+  document.getElementById("recent").innerHTML = L.recent.length ? `
+    <table><thead><tr><th>Time (UTC)</th><th>From</th><th>Message</th><th>Verdict</th><th>Type</th><th>Decided by</th><th class="num">Time</th></tr></thead>
+    <tbody>${L.recent.map(r => `<tr><td>${esc((r.ts || "").replace("T", " ").slice(0, 16))}</td><td>…${esc(r.sender)}</td>
+      <td class="preview">${esc(r.preview)}</td><td class="verdict ${esc(r.verdict)}">${esc(label[r.verdict] || r.verdict)}</td>
+      <td>${r.scam_type && r.scam_type !== "none" ? esc(r.scam_type.replace(/_/g, " ")) : "—"}</td><td>${r.decided_by === "nano" ? "Nano" : "Ultra agent"}</td>
+      <td class="num">${sec(r.total_latency_s)}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="empty">No checks yet.</div>`;
+
+  document.getElementById("steps").innerHTML = d.milestones.map(m => `
+    <li><span class="dot ${esc(m.status)}" aria-label="${esc(m.status)}"></span>
+      <div><div class="t">${esc(m.title)}</div><div class="d">${esc(m.detail)}</div></div></li>`).join("");
+
+  document.getElementById("stack").innerHTML = `<table><tbody>${d.tech_stack.map(s => `
+    <tr><td>${esc(s.layer)}</td><td><b>${esc(s.tool)}</b><div class="note">${esc(s.role)}</div></td></tr>`).join("")}</tbody></table>`;
+
+  document.getElementById("foot").textContent =
+    `Updated ${d.generated}. Refreshes every 30 seconds. Nano: ${P.nano_model || "—"} · Ultra: ${P.ultra_model || "—"}`;
+}
+
+async function load() {
+  try {
+    const r = await fetch(`/admin/data?token=${encodeURIComponent(token)}`);
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    render(await r.json());
+  } catch (e) {
+    document.getElementById("headline").textContent = `Dashboard data unavailable: ${e.message}`;
+  }
+}
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
