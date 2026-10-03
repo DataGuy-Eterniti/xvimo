@@ -66,7 +66,9 @@ You have two tools: web_search (open web) and search_regulators (official Nigeri
 How to work:
 1. Decide what actually needs verifying: named companies or platforms, links, schemes, claims about banks or agencies.
 2. Search with short, specific queries. Prefer search_regulators for investment schemes and bank or agency claims.
-3. If results are thin or off-target, search again with a different angle. You have at most {rounds} rounds of searching.
+3. If results are thin or off-target, search again with a different angle. You have at most {rounds} rounds of searching,
+   but most cases need only 1 or 2. Stop as soon as you have solid evidence for a verdict; extra searches make the
+   user wait longer.
 4. If nothing specific can be searched (no names, no links), decide from the message itself. Do not search for nothing.
 5. Never treat "no results found" as proof a company is safe or a scam; say what was and was not found.
 
