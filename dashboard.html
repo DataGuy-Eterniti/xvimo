@@ -3,299 +3,486 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Xvimo · Operations</title>
+<title>Xvimo Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <style>
   :root {
-    --ink: #060A13; --deep: #0A1220; --line: #182540; --text: #E7EEF8; --muted: #8A9CB8;
-    --cyan: #00E5FF; --green: #39FF88; --red: #FF5C72; --amber: #FFC24B;
+    --page: #080D19; --main: #0C1426; --side: #0A1120; --panel: #121B31; --panel-2: #19243F; --line: #22304F;
+    --text: #EAF2FB; --muted: #8EA2C0; --ink: #04121E;
+    --cyan: #00E5FF; --green: #39FF88; --teal: #13B5C8; --deep: #123A63;
+    --risk: #FF6B8B; --amber: #FFC24B;
     --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--ink); color: var(--text); font-family: var(--font); }
-  body { font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums; }
-  a { color: var(--cyan); }
+  html, body { margin: 0; background: var(--page); color: var(--text); font-family: var(--font); }
+  body { font-size: 14.5px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: var(--font); }
   :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 64px; }
-  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 22px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-  .brand { display: flex; align-items: baseline; gap: 14px; }
-  .wordmark { font-size: 28px; font-weight: 700; letter-spacing: 0.02em; }
-  .wordmark .x { background: linear-gradient(90deg, var(--cyan), var(--green)); -webkit-background-clip: text;
-    background-clip: text; color: transparent; }
-  .brand .sub { color: var(--muted); font-size: 15px; }
-  .platform { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13.5px; }
-  .pill { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; color: var(--muted); }
-  .pill b { color: var(--text); font-weight: 600; }
-  .pill.wait { border-color: rgba(255,194,75,.45); color: var(--amber); }
-  .pill.ok { border-color: rgba(57,255,136,.45); color: var(--green); }
+  .frame { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
 
-  /* hero: routing flow */
-  .hero { padding: 40px 0 8px; }
-  .hero h1 { font-size: clamp(26px, 3.4vw, 38px); line-height: 1.15; margin: 0 0 8px; font-weight: 600; max-width: 30ch; }
-  .hero p { color: var(--muted); margin: 0; max-width: 70ch; }
-  .flow { width: 100%; height: auto; margin-top: 24px; display: block; }
-  .flow text { font-family: var(--font); fill: var(--text); }
-  .flow .muted { fill: var(--muted); }
-  .flow .stream { fill: none; stroke-linecap: round; }
-  @media (prefers-reduced-motion: no-preference) {
-    .flow .stream { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: draw 1.6s ease-out forwards; }
-    .flow .stream.late { animation-delay: .5s; }
-  }
-  @keyframes draw { to { stroke-dashoffset: 0; } }
+  /* ---------- sidebar ---------- */
+  aside { background: var(--side); display: flex; flex-direction: column; padding: 34px 0 26px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .title { padding: 0 30px 22px; font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .title img { height: 34px; }
+  .title .x { background: linear-gradient(90deg, var(--cyan), var(--green)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .group { border-top: 1px solid #16203A; padding: 16px 0 8px; }
+  .ghead { display: flex; align-items: center; gap: 12px; padding: 0 30px 8px; color: var(--cyan);
+    font-size: 14px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .ghead svg { width: 19px; height: 19px; }
+  .item { display: flex; align-items: center; justify-content: space-between; padding: 10px 30px 10px 61px;
+    font-size: 14px; color: #D6E1F2; position: relative; cursor: pointer; background: none; border: 0; width: 100%; text-align: left; }
+  .item:hover { background: #111B30; }
+  .item.active { background: linear-gradient(90deg, rgba(0,229,255,.22), rgba(0,229,255,.04)); }
+  .item.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 16px;
+    background: var(--cyan); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+  .count { color: var(--muted); font-size: 12.5px; }
+  .tag { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; color: var(--ink);
+    background: linear-gradient(90deg, var(--cyan), var(--green)); }
+  .tag.off { background: var(--panel-2); color: var(--muted); }
+  .report { margin-top: auto; padding: 22px 26px 0; }
+  .report .rt { font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .report .rt span { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; background: var(--risk); color: #fff; }
+  .report .rs { color: var(--muted); font-size: 13px; margin: 2px 0 14px; }
+  .dl { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; cursor: pointer;
+    background: linear-gradient(90deg, var(--cyan), var(--green)); color: var(--ink); font-weight: 600; font-size: 14px;
+    padding: 11px 20px; border-radius: 999px; }
 
-  /* figure strip */
-  .strip { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line); margin: 28px 0 8px; }
-  .fig { padding: 18px 18px 16px; border-left: 1px solid var(--line); }
-  .fig:first-child { border-left: 0; padding-left: 0; }
-  .fig .v { font-size: 30px; font-weight: 600; line-height: 1.1; }
-  .fig .k { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+  /* ---------- main ---------- */
+  main { background: var(--main); padding: 40px 40px 70px; min-width: 0; }
+  .landing { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1.38fr); gap: 26px; }
+  .left { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 26px; align-content: start; }
+  .right { display: flex; flex-direction: column; gap: 26px; }
+  .s2 { grid-column: span 2; } .s3 { grid-column: span 3; } .s6 { grid-column: span 6; }
 
-  section { padding-top: 40px; }
-  h2 { font-size: 21px; font-weight: 600; margin: 0 0 4px; }
-  .lede { color: var(--muted); margin: 0 0 18px; max-width: 72ch; font-size: 14.5px; }
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+  .card { background: var(--panel); border-radius: 24px; padding: 26px 28px; min-width: 0; }
+  .card h2 { font-size: 17px; font-weight: 600; margin: 0; }
+  .hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .legend { display: flex; gap: 22px; color: var(--muted); font-size: 13px; }
+  .legend i { display: inline-block; width: 26px; height: 0; border-top: 2.5px solid; vertical-align: middle; margin-left: 8px; }
 
-  /* bars */
-  .bars { display: grid; gap: 10px; }
-  .bar { display: grid; grid-template-columns: 150px 1fr 56px; align-items: center; gap: 12px; font-size: 14px; }
-  .bar .track { height: 10px; background: var(--deep); border-radius: 5px; overflow: hidden; }
-  .bar .fill { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--cyan), var(--green)); }
-  .bar .fill.red { background: var(--red); } .bar .fill.amber { background: var(--amber); }
-  .bar .n { text-align: right; color: var(--muted); }
+  /* gradient KPI cards */
+  .kpi { border-radius: 24px; padding: 26px 30px; position: relative; overflow: hidden; min-height: 196px; }
+  .kpi::before, .kpi::after { content: ""; position: absolute; border-radius: 50%; }
+  .kpi::before { width: 190px; height: 190px; left: -60px; top: -70px; background: rgba(255,255,255,.12); }
+  .kpi::after { width: 120px; height: 120px; right: -36px; bottom: -44px; background: rgba(255,255,255,.14); }
+  .kpi.a { background: linear-gradient(120deg, var(--cyan), var(--green)); color: var(--ink); }
+  .kpi.b { background: linear-gradient(120deg, var(--teal), var(--deep)); color: #fff; }
+  .kpi .label { font-size: 17px; font-weight: 500; position: relative; }
+  .kpi .big { position: relative; margin-top: 30px; font-size: 60px; font-weight: 700; line-height: 1; letter-spacing: -.01em; }
+  .kpi .big small { font-size: 20px; font-weight: 500; margin: 0 10px 0 4px; }
+  .kpi .cap { position: relative; margin-top: 14px; font-size: 13px; opacity: .85; }
 
-  /* benchmark table */
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tiles { display: grid; gap: 26px; }
+  .tile { background: var(--panel); border-radius: 24px; padding: 0 22px; display: flex; align-items: center; gap: 14px; min-height: 85px; }
+  .tile .ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    background: linear-gradient(135deg, var(--cyan), var(--green)); }
+  .tile .ic.b { background: linear-gradient(135deg, var(--teal), #2E6BFF); }
+  .tile .ic svg { width: 21px; height: 21px; }
+  .tile .k { flex: 1; font-size: 17px; }
+  .tile .k small { display: block; color: var(--muted); font-size: 12.5px; }
+  .chip { border-radius: 8px; padding: 3px 12px; font-size: 14px; white-space: nowrap; }
+  .chip.up { background: rgba(57,255,136,.14); color: var(--green); }
+  .chip.risk { background: rgba(255,107,139,.16); color: #FF9DB3; }
+
+  .box { position: relative; }
+  .box.area { height: 250px; } .box.line { height: 300px; } .box.bars { height: 420px; } .box.donut { height: 220px; }
+  .statement { display: flex; justify-content: space-between; align-items: center; background: var(--panel-2); border-radius: 10px;
+    padding: 13px 18px; margin-top: 18px; font-size: 14px; }
+  .statement span:last-child { color: var(--cyan); letter-spacing: 2px; font-weight: 700; }
+
+  .donutrow { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(0, 1fr); gap: 16px; align-items: center; }
+  .donutrow.flip { align-items: end; }
+  .keys span { min-width: 0; overflow-wrap: anywhere; }
+  .center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+  .center span { color: var(--muted); font-size: 13px; display: block; } .center b { font-size: 24px; font-weight: 500; }
+  .keys { display: grid; gap: 12px; font-size: 14px; }
+  .keys div { display: flex; align-items: center; gap: 12px; }
+  .keys .ring { width: 22px; height: 22px; border-radius: 50%; border: 4px solid; flex: none; }
+  .keys small { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.2; }
+
+  /* ---------- breakdown ---------- */
+  .divider { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 56px 0 22px;
+    padding-top: 26px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .divider h2 { font-size: 22px; font-weight: 600; margin: 0; }
+  .divider p { color: var(--muted); margin: 0; font-size: 13.5px; }
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 26px; }
+  .g2 { grid-column: span 2; } .g4 { grid-column: 1 / -1; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   th { text-align: left; color: var(--muted); font-weight: 500; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); }
   td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-  td.num, th.num { text-align: right; }
-  .good { color: var(--green); } .warn { color: var(--amber); } .bad { color: var(--red); }
-  .note { color: var(--muted); font-size: 13px; margin-top: 10px; }
-
+  .num { text-align: right; }
+  .good { color: var(--green); } .warn { color: var(--amber); }
+  .note { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
   .verdict { font-weight: 600; white-space: nowrap; }
-  .verdict.likely_scam { color: var(--red); } .verdict.suspicious { color: var(--amber); } .verdict.no_red_flags { color: var(--green); }
-  .preview { color: var(--muted); max-width: 46ch; }
+  .verdict.likely_scam { color: var(--risk); } .verdict.suspicious { color: var(--amber); } .verdict.no_red_flags { color: var(--green); }
+  .preview { color: var(--muted); max-width: 44ch; }
   .scroll { overflow-x: auto; }
+  .bars2 { display: grid; gap: 11px; margin-top: 14px; }
+  .bar { display: grid; grid-template-columns: minmax(120px, 1.2fr) 2fr 40px; align-items: center; gap: 12px; font-size: 13.5px; }
+  .track { height: 10px; background: var(--panel-2); border-radius: 5px; overflow: hidden; }
+  .fill { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--cyan), var(--green)); }
+  .fill.alt { background: linear-gradient(90deg, var(--teal), #2E6BFF); }
+  .bar .n { text-align: right; color: var(--muted); }
+  .figs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 14px; }
+  .fig { background: var(--panel-2); border-radius: 14px; padding: 14px 16px; }
+  .fig b { font-size: 22px; font-weight: 600; display: block; } .fig span { color: var(--muted); font-size: 12.5px; }
+  .filter { display: inline-flex; align-items: center; gap: 8px; background: var(--panel-2); border-radius: 999px; padding: 4px 6px 4px 14px; font-size: 13px; }
+  .filter[hidden] { display: none; }
+  .filter button { border: 0; background: var(--line); color: var(--text); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  .steps { list-style: none; margin: 14px 0 0; padding: 0; }
+  .steps li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 5px; border: 2px solid var(--muted); }
+  .dot.done { background: var(--green); border-color: var(--green); } .dot.blocked { border-color: var(--amber); }
+  .steps .d { color: var(--muted); font-size: 12.5px; }
+  .empty { border: 1px dashed var(--line); border-radius: 12px; padding: 20px; color: var(--muted); }
+  .brandrow { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+  .brand { background: var(--panel-2); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; min-height: 48px; }
+  .brand img { max-height: 24px; max-width: 120px; } .brand b { font-weight: 600; } .brand span { color: var(--muted); font-size: 12.5px; }
+  footer { color: var(--muted); font-size: 12.5px; padding-top: 30px; }
 
-  /* milestones */
-  .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
-  .steps li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-  .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 6px; border: 2px solid var(--muted); }
-  .dot.done { background: var(--green); border-color: var(--green); }
-  .dot.blocked { border-color: var(--amber); }
-  .steps .t { font-weight: 500; } .steps .d { color: var(--muted); font-size: 13.5px; }
-
-  .empty { border: 1px dashed var(--line); border-radius: 10px; padding: 22px; color: var(--muted); }
-  footer { color: var(--muted); font-size: 13px; padding-top: 36px; }
-
-  @media (max-width: 860px) {
-    .two { grid-template-columns: 1fr; gap: 32px; }
-    .strip { grid-template-columns: repeat(2, 1fr); }
-    .fig { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); }
-    .bar { grid-template-columns: 110px 1fr 44px; }
+  @media (max-width: 1360px) {
+    .landing { grid-template-columns: 1fr; }
+    .right { display: grid; grid-template-columns: 1fr 1fr; }
+    .box.bars { height: 300px; }
+  }
+  @media (max-width: 980px) {
+    .frame { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; }
+    .group { display: none; }
+    main { padding: 24px 16px 56px; }
+    .left { grid-template-columns: 1fr; } .s2, .s3, .s6 { grid-column: auto; }
+    .right { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 1fr; } .g2 { grid-column: auto; }
+    .donutrow, .donutrow.flip { grid-template-columns: 1fr; }
+    .kpi .big { font-size: 48px; }
+    #recentTable table { min-width: 760px; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="brand"><span class="wordmark"><span class="x">X</span>VIMO</span><span class="sub">Operations</span></div>
-    <div class="platform" id="platform"></div>
-  </header>
+<div class="frame">
+  <aside>
+    <div class="title" id="title"><span><span class="x">X</span>vimo Dashboard</span></div>
 
-  <div class="hero">
-    <h1 id="headline">Loading live checks…</h1>
-    <p>Every message is read by Nemotron Nano first. Clear cases are answered in seconds; anything risky or uncertain goes to the Nemotron Ultra agent, which searches the web and cites its sources.</p>
-    <svg class="flow" id="flow" viewBox="0 0 1100 300" role="img" aria-label="Routing of checks between Nano and the Ultra agent"></svg>
-  </div>
+    <div class="group">
+      <div class="ghead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Report</div>
+      <a class="item active" href="#top">Overview</a>
+      <a class="item" href="#analysis">Deep analysis</a>
+    </div>
+    <div class="group">
+      <div class="ghead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Channels</div>
+      <div class="item">WhatsApp <span class="tag">live</span></div>
+      <div class="item">Web demo <span class="tag off">soon</span></div>
+    </div>
+    <div class="group">
+      <div class="ghead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Verdicts</div>
+      <button class="item" data-filter="likely_scam" type="button">Likely scam <span class="count" id="nScam">0</span></button>
+      <button class="item" data-filter="suspicious" type="button">Suspicious <span class="count" id="nSus">0</span></button>
+      <button class="item" data-filter="no_red_flags" type="button">No red flags <span class="count" id="nSafe">0</span></button>
+    </div>
+    <div class="group">
+      <div class="ghead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>Project</div>
+      <a class="item" href="#build">Build progress</a>
+      <a class="item" href="#stack">Tech stack</a>
+    </div>
 
-  <div class="strip" id="strip"></div>
+    <div class="report">
+      <div class="rt">Full checks report <span>JSON</span></div>
+      <div class="rs">Everything on this page, as data</div>
+      <button class="dl" id="download" type="button">Download <span aria-hidden="true">⤓</span></button>
+    </div>
+  </aside>
 
-  <div class="two">
-    <section>
-      <h2>Accuracy</h2>
-      <p class="lede">Measured on the labelled benchmark. The tuning sample is optimistic; the unseen sample is the honest number.</p>
-      <div id="bench"></div>
-    </section>
-    <section>
-      <h2>Speed and cost</h2>
-      <p class="lede">What tiered routing saves compared with sending every message to the large model.</p>
-      <div id="cost"></div>
-    </section>
-  </div>
+  <main id="top">
+    <!-- ===== landing: mirrors the reference layout ===== -->
+    <div class="landing">
+      <div class="left">
+        <div class="kpi a s2"><div class="label">Avg Nano reply</div><div class="big" id="kNano">—</div><div class="cap" id="kNanoCap"></div></div>
+        <div class="kpi b s2"><div class="label">Avg agent investigation</div><div class="big" id="kAgent">—</div><div class="cap" id="kAgentCap"></div></div>
+        <div class="tiles s2">
+          <div class="tile"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#04121E" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            <div class="k"><span id="kChecks">—</span><small>Messages checked</small></div><span class="chip up" id="kToday"></span></div>
+          <div class="tile"><span class="ic b"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+            <div class="k"><span id="kFlagged">—</span><small>Flagged as risky</small></div><span class="chip risk" id="kFlagPct"></span></div>
+        </div>
 
-  <div class="two">
-    <section>
-      <h2>What people are checking</h2>
-      <p class="lede">Scam types among flagged messages.</p>
-      <div class="bars" id="types"></div>
-    </section>
-    <section>
-      <h2>Languages</h2>
-      <p class="lede">Replies are written in the language the user wrote in.</p>
-      <div class="bars" id="langs"></div>
-    </section>
-  </div>
+        <div class="card s6">
+          <div class="head"><h2>Messages checked vs flagged</h2>
+            <div class="legend"><span>Checked<i style="border-color:var(--cyan)"></i></span><span>Flagged<i style="border-color:var(--green);border-top-style:dotted"></i></span></div></div>
+          <div class="box line"><canvas id="cDaily"></canvas></div>
+        </div>
 
-  <section>
-    <h2>The investigator at work</h2>
-    <p class="lede">How the Ultra agent uses its tools. Citations are only kept if the agent actually retrieved that page.</p>
-    <div class="two" id="agent"></div>
-  </section>
+        <div class="card s3">
+          <h2>Flagged by scam type</h2>
+          <div class="donutrow" style="margin-top:16px"><div class="box donut"><canvas id="cTypes"></canvas></div><div class="keys" id="kTypes"></div></div>
+        </div>
+        <div class="card s3">
+          <h2>Settled vs investigated</h2>
+          <div class="donutrow flip" style="margin-top:16px">
+            <div class="box donut"><canvas id="cRoute"></canvas><div class="center"><div><span>Investigated</span><b id="cRouteN">0</b></div></div></div>
+            <div class="keys" id="kRoute"></div></div>
+        </div>
+      </div>
 
-  <section>
-    <h2>Recent checks</h2>
-    <p class="lede">Senders are shown by their last four digits; long numbers in messages are masked.</p>
-    <div class="scroll" id="recent"></div>
-  </section>
+      <div class="right">
+        <div class="card">
+          <h2>Nano and agent reply time</h2>
+          <div class="box area" style="margin-top:14px"><canvas id="cLatency"></canvas></div>
+          <a class="statement" href="#recent"><span>View recent checks</span><span aria-hidden="true">•••</span></a>
+        </div>
+        <div class="card" style="flex:1">
+          <h2>Checks by weekday</h2>
+          <div class="box bars" style="margin-top:14px"><canvas id="cWeek"></canvas></div>
+        </div>
+      </div>
+    </div>
 
-  <div class="two">
-    <section>
-      <h2>Build progress</h2>
-      <p class="lede">Nebius x NVIDIA Global AI Hackathon · deadline 30 October 2026.</p>
-      <ol class="steps" id="steps"></ol>
-    </section>
-    <section>
-      <h2>Tech stack</h2>
-      <p class="lede">Every model call goes through an OpenAI-compatible endpoint, so moving to Nebius is a configuration change.</p>
-      <div class="scroll" id="stack"></div>
-    </section>
-  </div>
+    <!-- ===== breakdown ===== -->
+    <div class="divider" id="analysis"><h2>Breakdown and deep analysis</h2><p id="updated">Loading…</p></div>
 
-  <footer id="foot"></footer>
+    <div class="grid">
+      <div class="card g2" id="accuracy"><h2>Accuracy</h2>
+        <p class="hint">The tuning sample is optimistic; the unseen sample is the honest number.</p><div id="bench" style="margin-top:12px"></div></div>
+      <div class="card g2"><h2>Speed and cost</h2>
+        <p class="hint">Tiered routing compared with sending every message to the large model.</p><div id="cost" style="margin-top:12px"></div></div>
+
+      <div class="card g2"><h2>Why messages were escalated</h2>
+        <p class="hint">What triage saw before handing a case to the Ultra agent.</p><div class="bars2" id="reasons"></div></div>
+      <div class="card g2"><h2>What the agent concluded</h2>
+        <p class="hint">The agent's final verdict compared with triage's first view.</p><div class="bars2" id="outcomes"></div></div>
+
+      <div class="card g2"><h2>Triage confidence</h2>
+        <p class="hint">How sure Nano was. Below 0.75, cases always go to the agent.</p><div class="box" style="height:220px;margin-top:12px"><canvas id="cConf"></canvas></div></div>
+      <div class="card g2"><h2>Response time spread</h2>
+        <p class="hint">Median and slowest 10% for each path.</p><div class="figs" id="spread"></div></div>
+
+      <div class="card g2" id="investigator"><h2>The investigator at work</h2>
+        <p class="hint">Citations are kept only if the agent actually retrieved that page.</p><div id="agent"></div></div>
+      <div class="card g2"><h2>Languages and time of day</h2>
+        <p class="hint">Replies follow the user's language. Hours are UTC.</p><div class="bars2" id="langs"></div>
+        <div class="box" style="height:140px;margin-top:18px"><canvas id="cHours"></canvas></div></div>
+
+      <div class="card g4" id="recent">
+        <div class="head"><div><h2>Recent checks</h2><p class="hint">Senders shown by last four digits; long numbers in messages are masked.</p></div>
+          <span class="filter" id="filterChip" hidden>Showing <b id="filterName"></b><button type="button" id="clearFilter">Clear</button></span></div>
+        <div class="scroll" id="recentTable"></div>
+      </div>
+
+      <div class="card g2" id="build"><h2>Build progress</h2>
+        <p class="hint">Nebius x NVIDIA Global AI Hackathon · deadline 30 October 2026</p><ol class="steps" id="steps"></ol></div>
+      <div class="card g2" id="stack"><h2>Tech stack</h2>
+        <p class="hint">Every model call uses an OpenAI-compatible endpoint, so the platform is a configuration change.</p>
+        <div class="brandrow" id="brands"></div><div class="scroll" id="stackTable" style="margin-top:12px"></div></div>
+    </div>
+    <footer id="foot"></footer>
+  </main>
 </div>
 
 <script>
 const token = new URLSearchParams(location.search).get("token") || "";
+const q = `token=${encodeURIComponent(token)}`;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pct = v => v == null ? "—" : `${v}%`;
 const sec = v => v == null ? "—" : `${Number(v).toFixed(1)} s`;
-const label = { likely_scam: "Likely scam", suspicious: "Suspicious", no_red_flags: "No red flags",
-  web_search: "Open web search", search_regulators: "Regulator sites" };
+const fx = (v, d = 1) => v == null ? "—" : Number(v).toFixed(d);
+const nice = k => ({ likely_scam: "Likely scam", suspicious: "Suspicious", no_red_flags: "No red flags",
+  web_search: "Open web search", search_regulators: "Regulator sites" }[k] || String(k || "").replace(/_/g, " "));
+const RING = ["#00E5FF", "#39FF88", "#13B5C8", "#2E6BFF", "#7CF5E0", "#FFC24B", "#FF6B8B", "#8EA2C0"];
+let charts = {}, lastData = null, verdictFilter = null;
 
-function bars(el, obj, cls = "") {
+function setup() {
+  if (!window.Chart) return false;
+  Chart.defaults.color = "#8EA2C0";
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  Chart.defaults.borderColor = "rgba(255,255,255,.07)";
+  Chart.defaults.plugins.legend.display = false;
+  Chart.defaults.maintainAspectRatio = false;
+  return true;
+}
+function grad(c, stops, vertical = true) {
+  const a = c.chart.chartArea; if (!a) return stops[0];
+  const g = vertical ? c.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom) : c.chart.ctx.createLinearGradient(a.left, 0, a.right, 0);
+  stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); return g;
+}
+function draw(id, cfg) {
+  if (charts[id]) { charts[id].data = cfg.data; charts[id].update("none"); return; }
+  charts[id] = new Chart(document.getElementById(id), cfg);
+}
+function keys(el, labels, values, colors, withPct = true) {
+  const total = values.reduce((a, b) => a + b, 0) || 1;
+  el.innerHTML = labels.length ? labels.map((l, i) => `<div><span class="ring" style="border-color:${colors[i]}"></span>
+    <span>${withPct ? `<small>${(100 * values[i] / total).toFixed(1)}%</small>` : ""}${esc(nice(l))}</span></div>`).join("")
+    : `<div class="empty">Nothing yet.</div>`;
+}
+function bars(el, obj, alt = false) {
   const entries = Object.entries(obj || {}).filter(([k]) => k && k !== "null").sort((a, b) => b[1] - a[1]);
   if (!entries.length) { el.innerHTML = `<div class="empty">Nothing here yet.</div>`; return; }
   const max = Math.max(...entries.map(e => e[1]));
-  el.innerHTML = entries.map(([k, v]) => `
-    <div class="bar"><span>${esc(label[k] || k.replace(/_/g, " "))}</span>
-      <span class="track"><span class="fill ${cls}" style="width:${(100 * v / max).toFixed(1)}%"></span></span>
-      <span class="n">${v}</span></div>`).join("");
+  el.innerHTML = entries.map(([k, v]) => `<div class="bar"><span>${esc(nice(k))}</span>
+    <span class="track"><span class="fill ${alt ? "alt" : ""}" style="width:${(100 * v / max).toFixed(1)}%"></span></span><span class="n">${v}</span></div>`).join("");
 }
 
-function flow(live) {
-  const svg = document.getElementById("flow");
-  const n = live.total, a = live.routing.agent, b = live.routing.nano;
-  if (!n) {
-    svg.innerHTML = `<text x="0" y="60" class="muted" font-size="16">No checks yet. Send a message to the Xvimo WhatsApp number and it will appear here.</text>`;
-    return;
-  }
-  const w = v => Math.max(4, 70 * v / n);
-  const lat = live.latency;
-  svg.innerHTML = `
-    <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#00E5FF"/><stop offset="1" stop-color="#39FF88"/></linearGradient></defs>
-    <text x="0" y="132" font-size="46" font-weight="700">${n}</text>
-    <text x="0" y="160" class="muted" font-size="15">messages checked</text>
-    <path class="stream" d="M200 140 C 360 140, 360 70, 520 70" stroke="url(#g)" stroke-width="${w(b)}" stroke-opacity=".9"/>
-    <path class="stream late" d="M200 140 C 360 140, 360 215, 520 215" stroke="url(#g)" stroke-width="${w(a)}" stroke-opacity=".55"/>
-    <text x="540" y="64" font-size="20" font-weight="600">${b} settled by Nano</text>
-    <text x="540" y="88" class="muted" font-size="14">avg ${sec(lat.nano)} · answered without web search</text>
-    <text x="540" y="209" font-size="20" font-weight="600">${a} investigated by the Ultra agent</text>
-    <text x="540" y="233" class="muted" font-size="14">avg ${sec(lat.agent)} · ${(live.agent.avg_searches ?? 0).toFixed(1)} searches and ${(live.agent.avg_citations ?? 0).toFixed(1)} verified citations per case</text>`;
+function renderRecent() {
+  const L = lastData.live;
+  const rows = verdictFilter ? L.recent.filter(r => r.verdict === verdictFilter) : L.recent;
+  document.getElementById("filterChip").hidden = !verdictFilter;
+  document.getElementById("filterName").textContent = verdictFilter ? nice(verdictFilter) : "";
+  document.getElementById("recentTable").innerHTML = rows.length ? `
+    <table><thead><tr><th>Time (UTC)</th><th>From</th><th>Message</th><th>Verdict</th><th>Type</th><th>Decided by</th><th class="num">Time</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${esc((r.ts || "").replace("T", " ").slice(0, 16))}</td><td>…${esc(r.sender)}</td>
+      <td class="preview">${esc(r.preview)}</td><td class="verdict ${esc(r.verdict)}">${esc(nice(r.verdict))}</td>
+      <td>${r.scam_type && r.scam_type !== "none" ? esc(nice(r.scam_type)) : "—"}</td>
+      <td>${r.decided_by === "nano" ? "Nano" : "Ultra agent"}</td><td class="num">${sec(r.total_latency_s)}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="empty">${verdictFilter ? "No recent checks with this verdict." : "No checks yet. Send a message to the Xvimo WhatsApp number to see it here."}</div>`;
 }
 
 function render(d) {
-  const L = d.live, P = d.platform;
-  document.getElementById("platform").innerHTML = `
-    <span class="pill">Models on <b>${esc(P.on_nebius ? "Nebius Token Factory" : P.inference_now)}</b></span>
-    <span class="pill ${P.on_nebius ? "ok" : "wait"}">Nebius: ${esc(P.on_nebius ? "live" : P.nebius_status)}</span>`;
+  lastData = d;
+  const L = d.live, D = d.deep, P = d.platform;
+  if (d.brands.xvimo) document.getElementById("title").innerHTML = `<img src="/admin/brand/xvimo?${q}" alt="Xvimo">`;
+  document.getElementById("updated").textContent = `Updated ${d.generated} · refreshes every 30 seconds`;
 
-  const flagged = (L.verdicts.likely_scam || 0) + (L.verdicts.suspicious || 0);
-  document.getElementById("headline").textContent = L.total
-    ? `${flagged} of ${L.total} messages flagged as risky so far.`
-    : "Waiting for the first check.";
-  flow(L);
-
+  // landing
   const share = L.total ? Math.round(100 * L.routing.nano / L.total) : null;
-  const figs = [
-    [L.total, "checks run"],
-    [flagged, "flagged as scam or suspicious"],
-    [share == null ? "—" : share + "%", "settled by the small model"],
-    [sec(L.latency.nano), "average Nano reply"],
-    [L.cost.saving_pct == null ? "—" : L.cost.saving_pct + "%", "cheaper than all-Ultra"],
-  ];
-  document.getElementById("strip").innerHTML = figs.map(([v, k]) => `<div class="fig"><div class="v">${esc(v)}</div><div class="k">${esc(k)}</div></div>`).join("");
+  const bigTime = v => { if (v == null) return "—"; const [a, b] = Number(v).toFixed(1).split("."); return `${a}<small>.${b} s</small>`; };
+  document.getElementById("kNano").innerHTML = bigTime(L.latency.nano);
+  document.getElementById("kNanoCap").textContent = share == null ? "No checks yet" : `${share}% of checks answered on the fast path`;
+  document.getElementById("kAgent").innerHTML = bigTime(L.latency.agent);
+  document.getElementById("kAgentCap").textContent = L.routing.agent
+    ? `${fx(L.agent.avg_searches)} searches · ${fx(L.agent.avg_citations)} verified citations per case` : "No investigations yet";
+  document.getElementById("kChecks").textContent = L.total;
+  document.getElementById("kToday").textContent = `+${L.today} today`;
+  document.getElementById("kFlagged").textContent = L.flagged_total;
+  document.getElementById("kFlagPct").textContent = pct(L.flagged_pct);
+  document.getElementById("nScam").textContent = L.verdicts.likely_scam || 0;
+  document.getElementById("nSus").textContent = L.verdicts.suspicious || 0;
+  document.getElementById("nSafe").textContent = L.verdicts.no_red_flags || 0;
 
+  if (setup()) {
+    const ser = L.latency_series;
+    draw("cLatency", { type: "line", data: { labels: ser.map(p => p.t), datasets: [
+        { label: "Agent", data: ser.map(p => p.by === "ultra_agent" ? p.s : null), spanGaps: true, fill: true, tension: .45, pointRadius: 0, borderWidth: 2,
+          borderColor: "#13B5C8", backgroundColor: c => grad(c, ["rgba(19,181,200,.55)", "rgba(19,181,200,0)"]) },
+        { label: "Nano", data: ser.map(p => p.by === "nano" ? p.s : null), spanGaps: true, fill: true, tension: .45, pointRadius: 0, borderWidth: 2,
+          borderColor: "#39FF88", backgroundColor: c => grad(c, ["rgba(57,255,136,.45)", "rgba(57,255,136,0)"]) }] },
+      options: { interaction: { mode: "nearest", intersect: false },
+        plugins: { tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fx(c.raw)} s` } } },
+        scales: { x: { display: false }, y: { display: false, beginAtZero: true } } } });
+
+    draw("cDaily", { type: "line", data: { labels: L.daily.map(p => p.day.slice(5)), datasets: [
+        { label: "Checked", data: L.daily.map(p => p.checks), tension: .45, borderColor: "#00E5FF", borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 6 },
+        { label: "Flagged", data: L.daily.map(p => p.flagged), tension: .45, borderColor: "#39FF88", borderWidth: 2.5, borderDash: [2, 5], pointRadius: 0 }] },
+      options: { interaction: { mode: "index", intersect: false },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { color: "rgba(255,255,255,.09)" } } } } });
+
+    draw("cWeek", { type: "bar", data: { labels: L.weekdays.map(w => w.day), datasets: [{ data: L.weekdays.map(w => w.checks),
+        borderRadius: 3, barPercentage: .42, backgroundColor: c => grad(c, ["#00E5FF", "#13B5C8", "#2E6BFF"]) }] },
+      options: { scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { color: "rgba(255,255,255,.07)" } } } } });
+
+    const tl = Object.keys(L.scam_types), tv = Object.values(L.scam_types);
+    draw("cTypes", { type: "doughnut", data: { labels: tl.map(nice), datasets: [{ data: tv.length ? tv : [1],
+        backgroundColor: tv.length ? RING : ["#19243F"], borderWidth: 0 }] }, options: { cutout: "72%" } });
+    keys(document.getElementById("kTypes"), tl, tv, RING, false);
+
+    const rl = ["Settled by Nano", "Investigated by agent"], rv = [L.routing.nano, L.routing.agent];
+    draw("cRoute", { type: "doughnut", data: { labels: rl, datasets: [{ data: L.total ? rv : [1],
+        backgroundColor: L.total ? ["#00E5FF", "#39FF88"] : ["#19243F"], borderWidth: 0, spacing: 4 }] }, options: { cutout: "80%" } });
+    document.getElementById("cRouteN").textContent = L.routing.agent;
+    keys(document.getElementById("kRoute"), rl, rv, ["#00E5FF", "#39FF88"]);
+
+    draw("cConf", { type: "bar", data: { labels: D.confidence.map(c => c.band), datasets: [{ data: D.confidence.map(c => c.count),
+        borderRadius: 4, barPercentage: .6, backgroundColor: c => grad(c, ["#39FF88", "#13B5C8"]) }] },
+      options: { scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } } });
+
+    draw("cHours", { type: "bar", data: { labels: D.hours.map(h => h.hour), datasets: [{ data: D.hours.map(h => h.checks),
+        borderRadius: 2, backgroundColor: "#13B5C8" }] },
+      options: { scales: { y: { display: false, beginAtZero: true }, x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } } } } });
+  }
+
+  // breakdown
   const B = d.benchmarks, rows = [];
-  const cls = (v, goodAbove) => v == null ? "" : (v >= goodAbove ? "good" : "warn");
+  const tone = (v, t) => v == null ? "" : (v >= t ? "good" : "warn");
   if (B.triage) rows.push(["Nano triage · tuning sample", B.triage]);
   if (B.pipeline) rows.push(["Full pipeline · unseen sample", B.pipeline]);
   document.getElementById("bench").innerHTML = rows.length ? `
     <table><thead><tr><th>Run</th><th class="num">Msgs</th><th class="num">Accuracy</th><th class="num">Scams caught</th><th class="num">False alarms</th></tr></thead>
-    <tbody>${rows.map(([name, r]) => `<tr><td>${esc(name)}<div class="note">${esc(r.when)}</div></td>
-      <td class="num">${r.n}</td><td class="num ${cls(r.accuracy, 90)}">${pct(r.accuracy)}</td>
-      <td class="num ${cls(r.recall, 95)}">${pct(r.recall)}</td>
-      <td class="num ${r.false_alarm != null && r.false_alarm <= 10 ? "good" : "warn"}">${pct(r.false_alarm)}</td></tr>`).join("")}</tbody></table>
-    ${B.triage ? `<p class="note">Nano answered ${pct(B.triage.nano_final_share)} of the tuning sample on its own, with ${pct(B.triage.nano_final_accuracy)} accuracy on those.</p>` : ""}`
+    <tbody>${rows.map(([n, r]) => `<tr><td>${esc(n)}<div class="note">${esc(r.when)}</div></td><td class="num">${r.n}</td>
+      <td class="num ${tone(r.accuracy, 90)}">${pct(r.accuracy)}</td><td class="num ${tone(r.recall, 95)}">${pct(r.recall)}</td>
+      <td class="num ${r.false_alarm != null && r.false_alarm <= 10 ? "good" : "warn"}">${pct(r.false_alarm)}</td></tr>`).join("")}</tbody></table>`
     : `<div class="empty">Run <code>python run_triage_sample.py 25</code> or <code>python run_pipeline_sample.py 5 7</code> to fill this in.</div>`;
 
-  const C = L.cost;
-  document.getElementById("cost").innerHTML = L.total ? `
-    <table><tbody>
-      <tr><td>Average reply, Nano path</td><td class="num">${sec(L.latency.nano)}</td></tr>
-      <tr><td>Average reply, agent path</td><td class="num">${sec(L.latency.agent)}</td></tr>
-      <tr><td>Model cost of all checks</td><td class="num">$${C.actual.toFixed(5)}</td></tr>
+  const C = L.cost, K = D.cost_per_check;
+  document.getElementById("cost").innerHTML = L.total ? `<table><tbody>
+      <tr><td>Cost per 1,000 checks, Nano path</td><td class="num">$${K.nano_path == null ? "—" : (K.nano_path * 1000).toFixed(3)}</td></tr>
+      <tr><td>Cost per 1,000 checks, agent path</td><td class="num">$${K.agent_path == null ? "—" : (K.agent_path * 1000).toFixed(2)}</td></tr>
+      <tr><td>Tokens per check (Nano) · per case (Ultra)</td><td class="num">${fx(D.tokens.nano_per_check, 0)} · ${fx(D.tokens.ultra_per_case, 0)}</td></tr>
+      <tr><td>All checks so far</td><td class="num">$${C.actual.toFixed(5)}</td></tr>
       <tr><td>Same checks if every one used the Ultra agent</td><td class="num">$${C.all_ultra.toFixed(5)}</td></tr>
-      <tr><td>Saving from tiered routing</td><td class="num good">${pct(C.saving_pct)}</td></tr>
-    </tbody></table>
-    <p class="note">${C.estimated ? "Cost uses estimated per-token prices; set PRICE_NANO_IN, PRICE_NANO_OUT, PRICE_ULTRA_IN and PRICE_ULTRA_OUT in .env to Nebius Token Factory list prices." : "Cost uses the per-token prices set in .env."}</p>`
+      <tr><td>Saving from tiered routing</td><td class="num good">${pct(C.saving_pct)}</td></tr></tbody></table>
+    <p class="note">${C.estimated ? "Estimated per-token prices. Set PRICE_NANO_IN, PRICE_NANO_OUT, PRICE_ULTRA_IN and PRICE_ULTRA_OUT in .env to Nebius Token Factory list prices." : "Uses the per-token prices set in .env."}</p>`
     : `<div class="empty">Costs appear after the first live check.</div>`;
 
-  bars(document.getElementById("types"), L.scam_types, "red");
-  bars(document.getElementById("langs"), L.languages);
+  bars(document.getElementById("reasons"), D.escalation_reasons);
+  bars(document.getElementById("outcomes"), D.agent_outcomes, true);
+
+  const S = D.latency;
+  document.getElementById("spread").innerHTML = [
+    [sec(S.nano_p50), "Nano median"], [sec(S.nano_p90), "Nano slowest 10%"],
+    [sec(S.agent_p50), "Agent median"], [sec(S.agent_p90), "Agent slowest 10%"]]
+    .map(([v, k]) => `<div class="fig"><b>${v}</b><span>${k}</span></div>`).join("");
 
   const A = L.agent;
-  document.getElementById("agent").innerHTML = `
-    <div><div class="bars" id="tools"></div></div>
-    <div><table><tbody>
+  document.getElementById("agent").innerHTML = `<div class="bars2" id="tools"></div>
+    <table style="margin-top:16px"><tbody>
       <tr><td>Cases investigated</td><td class="num">${L.routing.agent}</td></tr>
-      <tr><td>Average searches per case</td><td class="num">${A.avg_searches ?? "—"}</td></tr>
-      <tr><td>Average verified citations</td><td class="num">${A.avg_citations ?? "—"}</td></tr>
-      <tr><td>Invented citations removed</td><td class="num">${A.dropped_citations}</td></tr>
-    </tbody></table></div>`;
-  bars(document.getElementById("tools"), A.tools);
+      <tr><td>Average searches per case</td><td class="num">${fx(A.avg_searches)}</td></tr>
+      <tr><td>Average verified citations</td><td class="num">${fx(A.avg_citations)}</td></tr>
+      <tr><td>Invented citations removed</td><td class="num">${A.dropped_citations}</td></tr></tbody></table>`;
+  bars(document.getElementById("tools"), A.tools, true);
+  bars(document.getElementById("langs"), L.languages);
+  renderRecent();
 
-  document.getElementById("recent").innerHTML = L.recent.length ? `
-    <table><thead><tr><th>Time (UTC)</th><th>From</th><th>Message</th><th>Verdict</th><th>Type</th><th>Decided by</th><th class="num">Time</th></tr></thead>
-    <tbody>${L.recent.map(r => `<tr><td>${esc((r.ts || "").replace("T", " ").slice(0, 16))}</td><td>…${esc(r.sender)}</td>
-      <td class="preview">${esc(r.preview)}</td><td class="verdict ${esc(r.verdict)}">${esc(label[r.verdict] || r.verdict)}</td>
-      <td>${r.scam_type && r.scam_type !== "none" ? esc(r.scam_type.replace(/_/g, " ")) : "—"}</td><td>${r.decided_by === "nano" ? "Nano" : "Ultra agent"}</td>
-      <td class="num">${sec(r.total_latency_s)}</td></tr>`).join("")}</tbody></table>`
-    : `<div class="empty">No checks yet.</div>`;
-
-  document.getElementById("steps").innerHTML = d.milestones.map(m => `
-    <li><span class="dot ${esc(m.status)}" aria-label="${esc(m.status)}"></span>
-      <div><div class="t">${esc(m.title)}</div><div class="d">${esc(m.detail)}</div></div></li>`).join("");
-
-  document.getElementById("stack").innerHTML = `<table><tbody>${d.tech_stack.map(s => `
-    <tr><td>${esc(s.layer)}</td><td><b>${esc(s.tool)}</b><div class="note">${esc(s.role)}</div></td></tr>`).join("")}</tbody></table>`;
-
+  document.getElementById("steps").innerHTML = d.milestones.map(m => `<li><span class="dot ${esc(m.status)}"></span>
+    <div><div>${esc(m.title)}</div><div class="d">${esc(m.detail)}</div></div></li>`).join("");
+  const items = [["nebius", "Nebius", "Token Factory"], ["nvidia", "NVIDIA", "Nemotron models"], ["tavily", "Tavily", "Web search"]];
+  document.getElementById("brands").innerHTML = items.map(([k, n, t]) => `<div class="brand">${d.brands[k]
+    ? `<img src="/admin/brand/${k}?${q}" alt="${n}">` : `<b>${n}</b>`}<span>${t}</span></div>`).join("");
+  document.getElementById("stackTable").innerHTML = `<table><tbody>${d.tech_stack.map(s => `<tr><td>${esc(s.layer)}</td>
+    <td><b>${esc(s.tool)}</b><div class="note">${esc(s.role)}</div></td></tr>`).join("")}</tbody></table>`;
   document.getElementById("foot").textContent =
-    `Updated ${d.generated}. Refreshes every 30 seconds. Nano: ${P.nano_model || "—"} · Ultra: ${P.ultra_model || "—"}`;
+    `Inference endpoint: ${P.on_nebius ? "Nebius Token Factory" : P.inference_now} · Nano: ${P.nano_model || "—"} · Ultra: ${P.ultra_model || "—"}`;
 }
+
+document.querySelectorAll("[data-filter]").forEach(b => b.addEventListener("click", () => {
+  verdictFilter = verdictFilter === b.dataset.filter ? null : b.dataset.filter;
+  document.querySelectorAll("[data-filter]").forEach(x => x.classList.toggle("active", x.dataset.filter === verdictFilter));
+  if (lastData) renderRecent();
+  document.getElementById("recent").scrollIntoView({ behavior: "smooth" });
+}));
+document.getElementById("clearFilter").addEventListener("click", () => {
+  verdictFilter = null; document.querySelectorAll("[data-filter]").forEach(x => x.classList.remove("active")); renderRecent();
+});
+document.getElementById("download").addEventListener("click", () => {
+  if (!lastData) return;
+  const blob = new Blob([JSON.stringify(lastData, null, 2)], { type: "application/json" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "xvimo-report.json" });
+  a.click(); URL.revokeObjectURL(a.href);
+});
 
 async function load() {
   try {
-    const r = await fetch(`/admin/data?token=${encodeURIComponent(token)}`);
+    const r = await fetch(`/admin/data?${q}`);
     if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
     render(await r.json());
-  } catch (e) {
-    document.getElementById("headline").textContent = `Dashboard data unavailable: ${e.message}`;
-  }
+  } catch (e) { document.getElementById("updated").textContent = `Dashboard data unavailable: ${e.message}`; }
 }
 load();
 setInterval(load, 30000);

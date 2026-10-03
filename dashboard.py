@@ -10,13 +10,20 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from events import load_events
 
 load_dotenv(override=True)
 router = APIRouter()
 HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard.html")
+BRAND_DIR = os.path.join("assets", "brand")
+BRAND_FILES = {  # official logo files you save yourself; missing files fall back to plain text
+    "nebius": ["nebius.svg", "nebius.png"],
+    "nvidia": ["nvidia.svg", "nvidia.png"],
+    "tavily": ["tavily.svg", "tavily.png"],
+    "xvimo": ["xvimo.png", "xvimo.svg"],
+}
 
 # USD per 1M tokens. Defaults are estimates; set the real Nebius Token Factory prices in .env.
 PRICES = {
@@ -72,6 +79,78 @@ def _avg(values):
     return round(sum(values) / len(values), 2) if values else None
 
 
+def _percentile(values, q):
+    values = sorted(v for v in values if isinstance(v, (int, float)))
+    if not values:
+        return None
+    k = (len(values) - 1) * q
+    lo, hi = int(k), min(int(k) + 1, len(values) - 1)
+    return round(values[lo] + (values[hi] - values[lo]) * (k - lo), 1)
+
+
+def deep_stats(events: list) -> dict:
+    """Second-level analysis: how triage and the agent interact, confidence, latency spread, tokens."""
+    agent = [e for e in events if e.get("decided_by") == "ultra_agent"]
+    nano = [e for e in events if e.get("decided_by") == "nano"]
+
+    # Why cases were escalated, judged from what triage said.
+    reasons = Counter()
+    for e in agent:
+        tv, conf = e.get("triage_verdict"), e.get("triage_confidence") or 0
+        if tv == "suspicious":
+            reasons["Triage unsure (suspicious)"] += 1
+        elif tv == "no_red_flags":
+            reasons["Looked safe but touches a risky topic"] += 1
+        elif conf < 0.75:
+            reasons["Low triage confidence"] += 1
+        else:
+            reasons["Other"] += 1
+
+    # What the agent concluded compared with triage's first view.
+    outcome = Counter()
+    for e in agent:
+        tv, fv = e.get("triage_verdict"), e.get("verdict")
+        if tv == "suspicious" and fv == "likely_scam":
+            outcome["Confirmed as scam"] += 1
+        elif tv in ("suspicious", "likely_scam") and fv == "no_red_flags":
+            outcome["Cleared as safe"] += 1
+        elif tv == "no_red_flags" and fv != "no_red_flags":
+            outcome["Caught a scam triage missed"] += 1
+        elif tv == fv:
+            outcome["Agreed with triage"] += 1
+        else:
+            outcome["Changed verdict"] += 1
+
+    buckets = Counter()
+    for e in events:
+        c = e.get("triage_confidence")
+        if isinstance(c, (int, float)):
+            buckets[min(int(c * 10), 9)] += 1
+    confidence = [{"band": f"{b / 10:.1f}–{(b + 1) / 10:.1f}", "count": buckets.get(b, 0)} for b in range(5, 10)]
+
+    hours = Counter(datetime.fromisoformat(e["ts"]).hour for e in events)
+    return {
+        "escalation_reasons": dict(reasons),
+        "agent_outcomes": dict(outcome),
+        "confidence": confidence,
+        "latency": {
+            "nano_p50": _percentile([e["total_latency_s"] for e in nano], .5),
+            "nano_p90": _percentile([e["total_latency_s"] for e in nano], .9),
+            "agent_p50": _percentile([e["total_latency_s"] for e in agent], .5),
+            "agent_p90": _percentile([e["total_latency_s"] for e in agent], .9),
+        },
+        "tokens": {
+            "nano_per_check": _avg([e["nano_in"] + e["nano_out"] for e in events]),
+            "ultra_per_case": _avg([e["ultra_in"] + e["ultra_out"] for e in agent]),
+        },
+        "cost_per_check": {
+            "nano_path": _avg([_cost(e["nano_in"], e["nano_out"], 0, 0) for e in nano]),
+            "agent_path": _avg([_cost(e["nano_in"], e["nano_out"], e["ultra_in"], e["ultra_out"]) for e in agent]),
+        },
+        "hours": [{"hour": h, "checks": hours.get(h, 0)} for h in range(24)],
+    }
+
+
 def live_stats(events: list) -> dict:
     n = len(events)
     nano = [e for e in events if e.get("decided_by") == "nano"]
@@ -81,6 +160,11 @@ def live_stats(events: list) -> dict:
     all_ultra = (per_agent_case or 0) * n
     tool_counts = Counter(s.get("tool") for e in agent for s in e.get("searches", []))
     days = Counter(e["ts"][:10] for e in events)
+    flagged_days = Counter(e["ts"][:10] for e in events if e.get("verdict") != "no_red_flags")
+    weekday_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    weekdays = Counter(datetime.fromisoformat(e["ts"]).weekday() for e in events)
+    today = datetime.now().astimezone().date().isoformat()
+    flagged_total = sum(1 for e in events if e.get("verdict") != "no_red_flags")
     return {
         "total": n,
         "verdicts": dict(Counter(e.get("verdict") for e in events)),
@@ -99,7 +183,13 @@ def live_stats(events: list) -> dict:
         "cost": {"actual": round(actual, 5), "all_ultra": round(all_ultra, 5),
                  "saving_pct": round(100 * (1 - actual / all_ultra), 1) if all_ultra else None,
                  "prices": PRICES, "estimated": PRICES_ARE_DEFAULTS},
-        "daily": dict(sorted(days.items())),
+        "daily": [{"day": d, "checks": days[d], "flagged": flagged_days.get(d, 0)} for d in sorted(days)],
+        "weekdays": [{"day": weekday_names[i], "checks": weekdays.get(i, 0)} for i in range(7)],
+        "latency_series": [{"t": e["ts"][5:16].replace("T", " "), "s": e.get("total_latency_s"),
+                            "by": e.get("decided_by")} for e in events[-30:]],
+        "today": days.get(today, 0),
+        "flagged_total": flagged_total,
+        "flagged_pct": round(100 * flagged_total / n, 1) if n else None,
         "recent": [{k: e.get(k) for k in ("ts", "sender", "preview", "language", "verdict", "scam_type",
                                           "decided_by", "total_latency_s", "citations")}
                    for e in events[-25:][::-1]],
@@ -157,6 +247,22 @@ def _check_token(request: Request):
         raise HTTPException(status_code=403, detail="Add ?token=<ADMIN_TOKEN> to the address.")
 
 
+def _brand_path(name: str):
+    for filename in BRAND_FILES.get(name, []):
+        path = os.path.join(BRAND_DIR, filename)
+        if os.path.exists(path):
+            return path
+    return None
+
+
+@router.get("/admin/brand/{name}")
+def brand_logo(name: str):
+    path = _brand_path(name)
+    if not path:
+        raise HTTPException(status_code=404, detail="Logo not found")
+    return FileResponse(path)
+
+
 @router.get("/admin", response_class=HTMLResponse)
 def admin_page(request: Request):
     _check_token(request)
@@ -167,11 +273,14 @@ def admin_page(request: Request):
 @router.get("/admin/data")
 def admin_data(request: Request):
     _check_token(request)
+    events = load_events()
     return {
         "generated": datetime.now().strftime("%d %b %Y, %H:%M"),
         "platform": PLATFORM,
-        "live": live_stats(load_events()),
+        "live": live_stats(events),
+        "deep": deep_stats(events),
         "benchmarks": benchmark_stats(),
         "tech_stack": [{"layer": a, "tool": b, "role": c} for a, b, c in TECH_STACK],
         "milestones": [{"status": a, "title": b, "detail": c} for a, b, c in MILESTONES],
+        "brands": {name: bool(_brand_path(name)) for name in BRAND_FILES},
     }
