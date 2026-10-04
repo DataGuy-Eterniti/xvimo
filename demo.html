@@ -7,7 +7,7 @@
 <meta name="description" content="Paste a suspicious message and watch Xvimo's AI agent check it, live.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #060A13; --panel: #0E1628; --panel-2: #15203A; --line: #1F2C49;
@@ -16,7 +16,7 @@
     --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; }
+  html, body { margin: 0; overflow-x: hidden; }
   body { font-family: var(--font); color: var(--text); font-size: 15px; line-height: 1.5; min-height: 100vh; background:
       radial-gradient(900px 500px at 70% -10%, rgba(0,229,255,.12), transparent 62%),
       linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px) 0 0 / 44px 44px,
@@ -36,7 +36,7 @@
     border-radius: 999px; padding: 8px 16px; font-weight: 600; font-size: 14px; }
 
   .grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.25fr); gap: 36px; margin-top: 26px; align-items: start; }
-  h1 { font-size: clamp(28px, 3.1vw, 42px); line-height: 1.08; margin: 0 0 10px; font-weight: 700; letter-spacing: -.01em; }
+  .demoTitle { font-size: clamp(28px, 3.1vw, 42px); line-height: 1.08; margin: 0 0 10px; font-weight: 700; letter-spacing: -.01em; }
   .lede { color: #C4D2E6; margin: 0 0 18px; }
   textarea { width: 100%; min-height: 150px; resize: vertical; background: var(--panel); color: var(--text); border: 1px solid var(--line);
     border-radius: 16px; padding: 14px 16px; font: inherit; font-size: 15px; line-height: 1.5; }
@@ -93,19 +93,135 @@
 
   @media (max-width: 1080px) { .grid { grid-template-columns: 1fr; } }
   @media (max-width: 640px) { .wrap { padding: 16px; } .below { grid-template-columns: 1fr; } .powered { display: none; } }
+
+  /* ================= hero (landing) ================= */
+  .announce { display: block; text-align: center; text-decoration: none; color: var(--ink); font-size: 13.5px; font-weight: 500;
+    padding: 9px 16px; background: linear-gradient(90deg, var(--cyan), var(--green)); }
+  .announce b { font-weight: 700; margin-left: 6px; }
+  .hero { min-height: calc(100vh - 38px); display: grid; grid-template-rows: auto 1fr auto; padding: 18px 32px 26px;
+    max-width: 1320px; margin: 0 auto; }
+  .topnav { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--line);
+    background: rgba(14,22,40,.72); backdrop-filter: blur(8px); border-radius: 16px; padding: 10px 12px 10px 20px; }
+  .topnav .links { display: flex; gap: 26px; font-size: 14px; }
+  .topnav .links a { color: #C4D2E6; text-decoration: none; } .topnav .links a:hover { color: var(--text); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 12px; padding: 10px 18px; font: 600 14.5px var(--font);
+    text-decoration: none; cursor: pointer; border: 1px solid transparent; }
+  .btn.primary { color: var(--ink); background: linear-gradient(90deg, var(--cyan), var(--green)); }
+  .btn.ghost { color: var(--text); border-color: #2E4067; background: rgba(21,32,58,.6); }
+  .btn.ghost:hover { border-color: var(--cyan); }
+  .btn.big { padding: 14px 24px; font-size: 16px; border-radius: 14px; }
+
+  .heroMain { position: relative; display: grid; place-items: center; text-align: center; padding: 26px 0 0; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #2E4067; border-radius: 999px; padding: 5px 14px;
+    font-size: 12px; letter-spacing: .12em; color: #C4D2E6; text-transform: uppercase; }
+  .tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .display { margin: 18px 0 14px; font-size: clamp(54px, 8.6vw, 128px); line-height: .95; letter-spacing: -.02em; font-weight: 700; }
+  .display .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-style: italic; color: #7F93B3; letter-spacing: -.01em; }
+  .heroSub { max-width: 600px; margin: 0 auto 24px; color: #C4D2E6; font-size: 17px; }
+  .ctaRow { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .avail { color: var(--muted); font-size: 12.5px; margin-top: 12px; }
+
+  .float { position: absolute; background: rgba(14,22,40,.88); border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px;
+    text-align: left; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+  .float b { display: block; font-size: 24px; line-height: 1.1; }
+  .float span { color: var(--muted); font-size: 12.5px; }
+  .float .bar { height: 5px; border-radius: 3px; margin-top: 8px; background: linear-gradient(90deg, var(--cyan), var(--green)); }
+  .f1 { left: 0; top: 10%; } .f2 { right: 0; top: 8%; } .f3 { right: 0; bottom: 14%; } .f4 { left: 0; bottom: 18%; }
+  @media (prefers-reduced-motion: no-preference) {
+    .float { animation: bob 6s ease-in-out infinite; } .f2 { animation-delay: -1.5s; } .f3 { animation-delay: -3s; } .f4 { animation-delay: -4.5s; }
+  }
+  @keyframes bob { 50% { transform: translateY(-8px); } }
+
+  /* ribbon: real scam messages flowing through the scanner */
+  .ribbonWrap { position: relative; margin: 26px 0 0; width: 100vw; margin-left: calc(50% - 50vw); }
+  svg.ribbon { width: 100%; height: max(130px, 11.8vw); display: block; overflow: hidden; }
+  .ribbon .band { fill: none; stroke: #0E1628; stroke-width: 46; stroke-linecap: round; }
+  .ribbon .bandEdge { fill: none; stroke: var(--line); stroke-width: 48; stroke-linecap: round; }
+  .ribbon text { font-family: var(--font); font-size: 19px; font-weight: 500; dominant-baseline: middle; }
+  .ribbon .raw { fill: #6C80A0; } .ribbon .checked { fill: var(--cyan); }
+  .scanner rect.body { fill: #0B1322; stroke: var(--cyan); stroke-width: 2; }
+  .scanner .wave { fill: var(--cyan); }
+  .verdictChip { position: absolute; left: 50%; transform: translate(-50%, 0); top: -6px; display: inline-flex; align-items: center; gap: 8px;
+    border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14px; color: var(--ink); white-space: nowrap;
+    background: linear-gradient(90deg, var(--cyan), var(--green)); transition: opacity .35s, transform .35s; }
+  .verdictChip.risk { background: var(--risk); color: #1A0610; }
+  .verdictChip.hide { opacity: 0; transform: translate(-50%, 8px); }
+
+  .built { display: flex; justify-content: center; align-items: center; gap: 34px; flex-wrap: wrap; color: var(--muted);
+    font-size: 13px; padding-top: 18px; }
+  .built .wm { color: #C4D2E6; font-weight: 600; font-size: 16px; letter-spacing: .01em; }
+  .built .wm small { color: var(--muted); font-weight: 400; font-size: 12.5px; margin-left: 6px; }
+
+  /* section header for the live demo */
+  .sectionHead { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); padding-top: 34px; margin-top: 10px; }
+  .eyebrow { color: var(--cyan); font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; }
+  .panel, .panel * { min-width: 0; } .panel { overflow-wrap: anywhere; }
+
+  @media (max-width: 1080px) { .float { display: none; } .topnav .links { display: none; } }
+  @media (max-width: 640px) { .hero { padding: 12px 14px 20px; } .ribbonWrap { margin-top: 18px; } .announce { font-size: 12px; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav>
-    <div class="brand"><span class="wordmark"><span class="x">X</span>VIMO</span><span class="live">● Live demo</span></div>
+<a class="announce" href="#demo">Xvimo now runs on NVIDIA Nemotron via Nebius Token Factory<b>Watch it work live ↓</b></a>
+
+<header class="hero">
+  <div class="topnav">
+    <span class="wordmark"><span class="x">X</span>VIMO</span>
+    <nav class="links" aria-label="Sections"><a href="#how">How it works</a><a href="#demo">Live demo</a><a href="#demo">Results</a></nav>
+    <a class="btn ghost" id="waitlist" href="#">Join the waitlist</a>
+  </div>
+
+  <div class="heroMain">
+    <div>
+      <span class="tag"><i></i>Agentic scam checker · Built for Africa</span>
+      <h1 class="display"><span class="serif">Don't guess,</span><br><span class="x">just check.</span></h1>
+      <p class="heroSub">Forward a suspicious message. An AI agent investigates it and replies with a verdict and real evidence — in English, Pidgin, Yoruba, Hausa or Igbo.</p>
+      <div class="ctaRow"><a class="btn primary big" href="#demo">Try the live demo</a><a class="btn ghost big" id="waitlist2" href="#">Join the waitlist</a></div>
+      <div class="avail">Works on WhatsApp · Try it in your browser below</div>
+    </div>
+    <div class="float f1"><b>2.7 s</b><span>average fast-path reply</span></div>
+    <div class="float f2"><b>100%</b><span>scams caught · unseen test sample</span><div class="bar"></div></div>
+    <div class="float f3"><b>~70%</b><span>answered by the small model alone</span></div>
+    <div class="float f4"><b>2.7</b><span>searches per investigation</span></div>
+  </div>
+
+  <div>
+    <div class="ribbonWrap" id="how" aria-label="Xvimo tech stack">
+      <span class="verdictChip" id="vchip">Nemotron 3 Nano · triage in ~2.7 s</span>
+      <svg class="ribbon" viewBox="0 0 1440 170" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <path id="rpath" d="M-60 120 C 240 40, 420 40, 720 100 S 1180 160, 1500 70"/>
+          <clipPath id="clipL"><rect x="-100" y="0" width="820" height="170"/></clipPath>
+          <clipPath id="clipR"><rect x="720" y="0" width="900" height="170"/></clipPath>
+        </defs>
+        <use href="#rpath" class="bandEdge"/><use href="#rpath" class="band"/>
+        <g clip-path="url(#clipL)"><text class="raw"><textPath href="#rpath" id="tpRaw"></textPath></text></g>
+        <g clip-path="url(#clipR)"><text class="checked"><textPath href="#rpath" id="tpChk"></textPath></text></g>
+        <g class="scanner" transform="translate(720 100)">
+          <rect class="body" x="-46" y="-30" width="92" height="60" rx="30"/>
+          <g id="wave"></g>
+        </g>
+      </svg>
+    </div>
+    <div class="built"><span>Built with</span>
+      <span class="wm">NVIDIA Nemotron<small>Nano + Ultra</small></span>
+      <span class="wm">Nebius<small>Token Factory</small></span>
+      <span class="wm">Tavily<small>web search</small></span>
+      <span class="wm">WhatsApp<small>channel</small></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="demo">
+  <div class="sectionHead">
+    <div><div class="eyebrow">Live demo</div></div>
     <span class="powered">Powered by <b>NVIDIA Nemotron</b> on <b>Nebius Token Factory</b> · <b>Tavily</b> search</span>
-    <a class="navlink" id="waitlist" href="#">Join the waitlist</a>
-  </nav>
+  </div>
 
   <div class="grid">
     <section>
-      <h1>Paste a suspicious message. <span class="x">Watch the agent check it.</span></h1>
+      <h2 class="demoTitle">Paste a suspicious message. <span class="x">Watch the agent check it.</span></h2>
       <p class="lede">This is the same AI that answers on WhatsApp. Every step on the right is happening for real.</p>
       <label for="msg" class="sr" style="position:absolute;left:-9999px">Message to check</label>
       <textarea id="msg" maxlength="1500" placeholder="e.g. Dear Customer, your BVN has been blocked. Call our help line to reactivate…"></textarea>
@@ -177,7 +293,43 @@
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  if (WAITLIST_URL) $("waitlist").href = WAITLIST_URL; else $("waitlist").style.display = "none";
+  ["waitlist", "waitlist2"].forEach(id => { if (WAITLIST_URL) $(id).href = WAITLIST_URL; else $(id).style.display = "none"; });
+
+  /* ---------- hero ribbon: scam messages flowing through the scanner ---------- */
+  (function ribbon() {
+    const LINES = ["NVIDIA Nemotron 3 Nano — triage", "NVIDIA Nemotron 3 Ultra — investigator agent",
+      "Nebius Token Factory — inference", "Tavily — web + regulator search", "Native tool calling",
+      "Verified citations", "WhatsApp via 360dialog", "Python · FastAPI", "Live streaming agent trace",
+      "300-message labelled benchmark"];
+    const VERDICTS = [["Nemotron 3 Nano · triage in ~2.7 s", "safe"], ["Nemotron 3 Ultra · agent with tool calling", "safe"],
+      ["Nebius Token Factory · Nano at $0.06 / 1M tokens", "safe"], ["Tavily · regulator-only search", "safe"],
+      ["Tiered routing · ~70% answered by Nano", "safe"], ["WhatsApp · live via 360dialog", "safe"]];
+    const text = LINES.join("      ◆      ") + "      ◆      ";
+    const raw = $("tpRaw"), chk = $("tpChk");
+    raw.textContent = chk.textContent = text + text;
+    // scanner "waveform"
+    const wave = $("wave"); const bars = [];
+    for (let i = 0; i < 9; i++) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      r.setAttribute("class", "wave"); r.setAttribute("x", -26 + i * 6.5); r.setAttribute("width", 3.4); r.setAttribute("rx", 1.7);
+      wave.appendChild(r); bars.push(r); }
+    const setBars = t => bars.forEach((b, i) => { const h = 6 + 16 * Math.abs(Math.sin(t / 260 + i * .8));
+      b.setAttribute("height", h); b.setAttribute("y", -h / 2); });
+    const chip = $("vchip"); let vi = 0;
+    function nextVerdict() {
+      chip.classList.add("hide");
+      setTimeout(() => { const [txt, tone] = VERDICTS[vi++ % VERDICTS.length]; chip.textContent = txt;
+        chip.className = "verdictChip" + (tone === "risk" ? " risk" : ""); }, 380);
+    }
+    if (reduce) { setBars(0); return; }
+    const half = raw.getComputedTextLength() / 2; let off = 0, last = performance.now();
+    (function frame(now) {
+      off -= (now - last) * 0.06; last = now;
+      if (-off > half) off += half;
+      raw.setAttribute("startOffset", off); chk.setAttribute("startOffset", off); setBars(now);
+      requestAnimationFrame(frame);
+    })(last);
+    setInterval(nextVerdict, 3200);
+  })();
   $("chips").innerHTML = EXAMPLES.map(([l], i) => `<button class="chip" type="button" data-i="${i}">${esc(l)}</button>`).join("");
   $("chips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) { $("msg").value = EXAMPLES[b.dataset.i][1]; count(); } });
   const count = () => $("chars").textContent = `${$("msg").value.length} / 1500`;
