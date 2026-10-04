@@ -30,8 +30,10 @@ Analyse it and reply with ONLY a JSON object, no other text, using exactly these
   "needs_web_check": true if an organization, platform or link should be verified online,
   "needs_escalation": true if the case is ambiguous and needs deeper reasoning,
   "reason": one plain sentence a non-technical person can understand,
-  "reply": a short WhatsApp-style message to the user (max 50 words), written in the SAME language as the message
-           (Pidgin for Pidgin, Yoruba for Yoruba, etc.), stating the verdict, the key reason and one safety tip
+  "reply": a short WhatsApp-style message (max 50 words) to the USER WHO FORWARDED the message to you for checking,
+           written in the SAME language as the message (Pidgin for Pidgin, Yoruba for Yoruba, etc.). Explain the key
+           reason and give one safety tip. Never answer as if you were the sender or recipient of the forwarded message,
+           and do not start with the verdict label (the app adds "Likely scam" / "No red flags" above your reply)
 }
 
 Scam type definitions (pick the closest):
@@ -73,7 +75,8 @@ Guidance:
   to call, click or reply, is at least "suspicious"."""
 
 ALLOWED_VERDICTS = {"likely_scam", "suspicious", "no_red_flags"}
-CONFIDENT = 0.75  # Nano decides alone only when it is this confident
+CONFIDENT = 0.75        # minimum confidence for Nano to clear a low-risk message on its own
+SCAM_CONFIDENT = 0.90   # minimum confidence for Nano to call a scam on its own (below this, the agent double-checks)
 
 
 # Safety net: if the message touches a high-risk topic, Nano may not clear it alone.
@@ -97,7 +100,9 @@ def route_for(result: dict, message: str = "") -> str:
         conf = float(result.get("confidence", 0))
     except (TypeError, ValueError):
         conf = 0.0
-    if result.get("verdict") in ("likely_scam", "no_red_flags") and conf >= CONFIDENT:
+    if result.get("verdict") == "likely_scam" and conf >= SCAM_CONFIDENT:
+        return "final"
+    if result.get("verdict") == "no_red_flags" and conf >= CONFIDENT:
         return "final"
     return "escalate"
 

@@ -71,6 +71,8 @@ How to work:
    user wait longer.
 4. If nothing specific can be searched (no names, no links), decide from the message itself. Do not search for nothing.
 5. Never treat "no results found" as proof a company is safe or a scam; say what was and was not found.
+6. When citing, prefer official sources (regulators, government, the company's own site) and reputable news over
+   document-sharing sites, forums or mirrors.
 
 Judging rules:
 - Scam: asks for money, fees, PINs, OTPs, BVN, card or login details under false pretences, promises unrealistic
@@ -87,7 +89,7 @@ When you are done, reply with ONLY this JSON object and nothing else:
   "scam_type": "ponzi" | "impersonation" | "fake_job" | "fake_loan" | "phishing_link" | "romance" | "fake_giveaway" | "advance_fee" | "other" | "none",
   "reason": "one or two plain sentences explaining the verdict",
   "evidence": [{{"finding": "what this source shows", "url": "exact URL from your search results"}}],
-  "reply": "a short WhatsApp-style message to the user (max 70 words) in {language}, with the verdict, the key reason and one safety tip"
+  "reply": "a short WhatsApp-style message (max 70 words) in {language} to the user who forwarded the message for checking: the key reason and one safety tip. Do not start with the verdict label (the app adds it), and never answer as if you were the sender or recipient of the forwarded message"
 }}
 Only cite URLs that appeared in your search results. Use an empty evidence list if you did not search."""
 
@@ -121,14 +123,23 @@ def _execute_tool(name: str, arguments: str, trace: dict) -> str:
 
 
 # ---------------------------------------------------------------- model calls
+_EXTRA_BODY_OK = {"value": True}  # becomes False if this provider rejects chat_template_kwargs
+
+
 def _chat(messages: list, use_tools: bool, force_answer: bool = False):
-    params = dict(model=ULTRA_MODEL, messages=messages, temperature=0.1, max_tokens=3000,
-                  extra_body={"chat_template_kwargs": {"enable_thinking": ULTRA_THINKING}})
+    params = dict(model=ULTRA_MODEL, messages=messages, temperature=0.1, max_tokens=3000)
     if use_tools:
         params["tools"] = TOOLS
         params["tool_choice"] = "none" if force_answer else "auto"
     for attempt in range(len(RETRY_WAITS) + 1):
         try:
+            if _EXTRA_BODY_OK["value"]:
+                try:
+                    return client.chat.completions.create(
+                        **params, extra_body={"chat_template_kwargs": {"enable_thinking": ULTRA_THINKING}})
+                except BadRequestError:
+                    # Some providers reject extra options; retry once without them before blaming tool calling.
+                    _EXTRA_BODY_OK["value"] = False
             return client.chat.completions.create(**params)
         except (RateLimitError, InternalServerError, APIConnectionError):
             if attempt == len(RETRY_WAITS):
