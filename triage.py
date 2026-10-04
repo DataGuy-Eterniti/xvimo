@@ -33,7 +33,8 @@ Analyse it and reply with ONLY a JSON object, no other text, using exactly these
   "reply": a short WhatsApp-style message (max 50 words) to the USER WHO FORWARDED the message to you for checking,
            written in the SAME language as the message (Pidgin for Pidgin, Yoruba for Yoruba, etc.). Explain the key
            reason and give one safety tip. Never answer as if you were the sender or recipient of the forwarded message,
-           and do not start with the verdict label (the app adds "Likely scam" / "No red flags" above your reply)
+           and do not start with the verdict label (the app adds "Likely scam" / "No red flags" above your reply).
+           For "no_red_flags", say you found no warning signs; never claim the message is definitely safe or "not a scam"
 }
 
 Scam type definitions (pick the closest):
@@ -66,6 +67,8 @@ Guidance:
   urgency and limited slots, requests for PIN/OTP/BVN or card details, look-alike links,
   someone claiming a new number who asks for money, and threats.
 - Use "suspicious" when there are some warning signs but you cannot be sure.
+- Nigerian fraud slang such as "maga", "mugu", "yahoo" or "format" is a red flag: the message may come from,
+  or be about, a fraudster. Mark it at least "suspicious".
 - Placeholders like [NAME], [PHONE], [ACCOUNT], [EMAIL] and [AMOUNT] hide private details. The ACTION around them
   still counts: "call [PHONE] to reactivate your card" is a request to call an unknown number about your account.
 - Unsolicited job, interview, "aptitude test", "career chat" or "work brief" invitations from firms the reader never
@@ -75,6 +78,7 @@ Guidance:
   to call, click or reply, is at least "suspicious"."""
 
 ALLOWED_VERDICTS = {"likely_scam", "suspicious", "no_red_flags"}
+LOW_RESOURCE_LANGS = {"yoruba", "hausa", "igbo", "mixed", "other"}
 CONFIDENT = 0.75        # minimum confidence for Nano to clear a low-risk message on its own
 SCAM_CONFIDENT = 0.90   # minimum confidence for Nano to call a scam on its own (below this, the agent double-checks)
 
@@ -83,9 +87,31 @@ SCAM_CONFIDENT = 0.90   # minimum confidence for Nano to call a scam on its own 
 RISK_PATTERN = re.compile(
     r"interview|recruit|aptitude|shortlist|vacanc|bvn|atm|block|deactivat|suspend|reactivat|invest|"
     r"profit|return|roi|loan|grant|won|win |prize|promo|bonus|giveaway|urgent|click|http|www\.|"
-    r"verify|password|pin\b|otp|code|send .*money|fee|pay ",
+    r"verify|password|pin\b|otp|code|send .*money|fee|pay |"
+    r"maga|mugu|yahoo|419|format\b",  # Nigerian fraud slang
     re.I,
 )
+
+
+def route_reason(result: dict, message: str = "") -> str:
+    """Plain-language explanation of the routing decision, for the live demo and logs."""
+    verdict, lang = result.get("verdict"), result.get("language")
+    try:
+        conf = float(result.get("confidence", 0))
+    except (TypeError, ValueError):
+        conf = 0.0
+    if route_for(result, message) == "final":
+        return ("Clear scam with high confidence — answered instantly." if verdict == "likely_scam"
+                else "Low-risk message with high confidence — answered instantly.")
+    if verdict == "suspicious":
+        return "Triage is unsure — the agent will investigate."
+    if verdict == "likely_scam":
+        return f"Looks like a scam, but confidence ({conf:.2f}) is below {SCAM_CONFIDENT} — the agent double-checks."
+    if RISK_PATTERN.search(message or ""):
+        return "Looks safe, but touches a high-risk topic — a safe verdict needs a second opinion."
+    if lang in LOW_RESOURCE_LANGS:
+        return f"Looks safe, but the message is in {lang.title()} — the larger model double-checks."
+    return f"Confidence ({conf:.2f}) is too low to answer alone — the agent will investigate."
 
 
 def route_for(result: dict, message: str = "") -> str:
@@ -95,6 +121,9 @@ def route_for(result: dict, message: str = "") -> str:
     when it is confident AND the message avoids every high-risk topic. Otherwise Ultra double-checks.
     """
     if result.get("verdict") == "no_red_flags" and RISK_PATTERN.search(message or ""):
+        return "escalate"
+    # Nano is weaker in Yoruba, Hausa and Igbo: never let it clear those messages alone.
+    if result.get("verdict") == "no_red_flags" and result.get("language") in LOW_RESOURCE_LANGS:
         return "escalate"
     try:
         conf = float(result.get("confidence", 0))

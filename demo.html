@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xvimo — live demo</title>
+<meta name="description" content="Paste a suspicious message and watch Xvimo's AI agent check it, live.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060A13; --panel: #0E1628; --panel-2: #15203A; --line: #1F2C49;
+    --text: #EAF2FB; --muted: #8EA2C0; --ink: #04121E;
+    --cyan: #00E5FF; --green: #39FF88; --risk: #FF6B8B; --amber: #FFC24B;
+    --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: var(--font); color: var(--text); font-size: 15px; line-height: 1.5; min-height: 100vh; background:
+      radial-gradient(900px 500px at 70% -10%, rgba(0,229,255,.12), transparent 62%),
+      linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px) 0 0 / 44px 44px,
+      linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px) 0 0 / 44px 44px, var(--bg); }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+  a { color: var(--cyan); }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 22px 32px 30px; }
+
+  nav { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  .wordmark { font-size: 22px; font-weight: 700; letter-spacing: .05em; }
+  .x { background: linear-gradient(90deg, var(--cyan), var(--green)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .live { font-size: 12.5px; color: var(--green); border: 1px solid rgba(57,255,136,.35); border-radius: 999px; padding: 2px 10px; }
+  .powered { color: var(--muted); font-size: 13px; }
+  .powered b { color: var(--text); font-weight: 500; }
+  .navlink { text-decoration: none; color: var(--ink); background: linear-gradient(90deg, var(--cyan), var(--green));
+    border-radius: 999px; padding: 8px 16px; font-weight: 600; font-size: 14px; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.25fr); gap: 36px; margin-top: 26px; align-items: start; }
+  h1 { font-size: clamp(28px, 3.1vw, 42px); line-height: 1.08; margin: 0 0 10px; font-weight: 700; letter-spacing: -.01em; }
+  .lede { color: #C4D2E6; margin: 0 0 18px; }
+  textarea { width: 100%; min-height: 150px; resize: vertical; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+    border-radius: 16px; padding: 14px 16px; font: inherit; font-size: 15px; line-height: 1.5; }
+  textarea:focus { border-color: var(--cyan); outline: none; }
+  .meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; margin: 6px 2px 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 16px; }
+  .chip { background: var(--panel-2); border: 1px solid var(--line); color: #D6E1F2; border-radius: 999px; padding: 6px 12px;
+    font: inherit; font-size: 13px; cursor: pointer; }
+  .chip:hover { border-color: var(--cyan); }
+  .go { width: 100%; border: 0; border-radius: 999px; padding: 14px 20px; font: 600 16px var(--font); color: var(--ink);
+    background: linear-gradient(90deg, var(--cyan), var(--green)); cursor: pointer; }
+  .go[disabled] { opacity: .6; cursor: wait; }
+  .note { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+  .err { color: var(--risk); font-size: 14px; margin-top: 10px; min-height: 18px; }
+
+  /* flow */
+  .stage { background: rgba(14,22,40,.6); border: 1px solid var(--line); border-radius: 22px; padding: 16px 18px 12px; }
+  svg.flow { width: 100%; height: auto; display: block; overflow: visible; }
+  .edge { fill: none; stroke: #20304F; stroke-width: 2; }
+  .edge.lit { stroke: url(#edgeGrad); }
+  .node rect { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; transition: stroke .3s, fill .3s; }
+  .node text { fill: var(--text); font-family: var(--font); font-size: 15px; font-weight: 600; }
+  .node .k { fill: var(--muted); font-size: 11.5px; font-weight: 500; letter-spacing: .06em; }
+  .node.on rect { stroke: var(--cyan); fill: #0F2236; }
+  .node.busy rect { stroke: var(--cyan); animation: busy 1s ease-in-out infinite; }
+  .node.on.risk rect { stroke: var(--risk); fill: #2A1424; } .node.on.warn rect { stroke: var(--amber); fill: #2A2310; }
+  .node.on.safe rect { stroke: var(--green); fill: #0F2A22; }
+  .node .glow { fill: none; stroke: var(--cyan); stroke-width: 6; opacity: 0; filter: blur(6px); transition: opacity .3s; }
+  .node.on .glow { opacity: .55; } .node.on.risk .glow { stroke: var(--risk); } .node.on.safe .glow { stroke: var(--green); }
+  .node.on.warn .glow { stroke: var(--amber); }
+  @keyframes busy { 50% { stroke-opacity: .35; } }
+  .pulse { fill: var(--cyan); filter: drop-shadow(0 0 6px var(--cyan)); }
+
+  /* trace + result */
+  .below { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; min-height: 220px; }
+  .panel h2 { font-size: 14px; color: var(--muted); font-weight: 500; margin: 0 0 10px; }
+  .trace { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 13.5px; }
+  .trace li { display: grid; grid-template-columns: 48px 1fr; gap: 8px; }
+  .trace .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .trace .s { color: #D6E1F2; } .trace .s b { color: var(--text); font-weight: 600; }
+  .trace .q { color: var(--cyan); }
+  .trace .src { display: block; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .placeholder { color: var(--muted); font-size: 13.5px; }
+  .verdict { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
+  .verdict.likely_scam { color: var(--risk); } .verdict.suspicious { color: var(--amber); } .verdict.no_red_flags { color: var(--green); }
+  .reply { color: #D6E1F2; margin: 0 0 12px; white-space: pre-wrap; }
+  .ev { display: grid; gap: 8px; margin: 0 0 12px; }
+  .ev a { display: block; text-decoration: none; background: var(--panel-2); border-radius: 10px; padding: 8px 10px; font-size: 13px; color: #D6E1F2; }
+  .ev a span { display: block; color: var(--cyan); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stats { display: flex; flex-wrap: wrap; gap: 6px; }
+  .stat { background: var(--panel-2); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; color: var(--muted); }
+  footer { color: var(--muted); font-size: 12.5px; margin-top: 22px; }
+
+  @media (max-width: 1080px) { .grid { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) { .wrap { padding: 16px; } .below { grid-template-columns: 1fr; } .powered { display: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><span class="wordmark"><span class="x">X</span>VIMO</span><span class="live">● Live demo</span></div>
+    <span class="powered">Powered by <b>NVIDIA Nemotron</b> on <b>Nebius Token Factory</b> · <b>Tavily</b> search</span>
+    <a class="navlink" id="waitlist" href="#">Join the waitlist</a>
+  </nav>
+
+  <div class="grid">
+    <section>
+      <h1>Paste a suspicious message. <span class="x">Watch the agent check it.</span></h1>
+      <p class="lede">This is the same AI that answers on WhatsApp. Every step on the right is happening for real.</p>
+      <label for="msg" class="sr" style="position:absolute;left:-9999px">Message to check</label>
+      <textarea id="msg" maxlength="1500" placeholder="e.g. Dear Customer, your BVN has been blocked. Call our help line to reactivate…"></textarea>
+      <div class="meta"><span>Try one of these:</span><span id="chars">0 / 1500</span></div>
+      <div class="chips" id="chips"></div>
+      <button class="go" id="go" type="button">Check this message</button>
+      <div class="err" id="err" role="alert"></div>
+      <p class="note">Please don't paste real names, phone or account numbers. Checks may be logged, with long numbers masked, to improve Xvimo.</p>
+    </section>
+
+    <section aria-live="polite">
+      <div class="stage">
+        <svg class="flow" viewBox="0 0 1000 330" role="img" aria-label="Live view of the Xvimo pipeline">
+          <defs><linearGradient id="edgeGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1000" y2="0">
+            <stop offset="0" stop-color="#00E5FF"/><stop offset="1" stop-color="#39FF88"/></linearGradient></defs>
+          <path id="e-msg-nano"   class="edge" d="M206 175 L 284 175"/>
+          <path id="e-nano-ultra" class="edge" d="M504 175 C 540 175, 535 100, 570 100"/>
+          <path id="e-nano-safe"  class="edge" d="M504 175 C 540 175, 535 260, 570 260"/>
+          <path id="e-ultra-reg"  class="edge" d="M640 72 C 640 52, 560 52, 535 46"/>
+          <path id="e-ultra-web"  class="edge" d="M710 72 C 710 52, 780 52, 800 46"/>
+          <path id="e-ultra-out"  class="edge" d="M780 100 C 815 100, 805 175, 830 175"/>
+          <path id="e-safe-out"   class="edge" d="M780 260 C 815 260, 805 175, 830 175"/>
+          <g id="n-msg" class="node"><rect class="glow" x="6" y="139" width="200" height="72" rx="16"/><rect x="6" y="139" width="200" height="72" rx="16"/>
+            <text class="k" x="26" y="167">YOUR MESSAGE</text><text x="26" y="191">Received</text></g>
+          <g id="n-nano" class="node"><rect class="glow" x="284" y="139" width="220" height="72" rx="16"/><rect x="284" y="139" width="220" height="72" rx="16"/>
+            <text class="k" x="304" y="167">TRIAGE · NEMOTRON NANO</text><text x="304" y="191" id="nanoLabel">Read and route</text></g>
+          <g id="n-ultra" class="node"><rect class="glow" x="570" y="72" width="210" height="56" rx="16"/><rect x="570" y="72" width="210" height="56" rx="16"/>
+            <text class="k" x="590" y="94">AGENT · NEMOTRON ULTRA</text><text x="590" y="116" id="ultraLabel">Investigate</text></g>
+          <g id="n-reg" class="node"><rect class="glow" x="440" y="6" width="190" height="40" rx="12"/><rect x="440" y="6" width="190" height="40" rx="12"/>
+            <text x="458" y="32" style="font-size:13.5px">Regulator search</text></g>
+          <g id="n-web" class="node"><rect class="glow" x="720" y="6" width="160" height="40" rx="12"/><rect x="720" y="6" width="160" height="40" rx="12"/>
+            <text x="738" y="32" style="font-size:13.5px">Web search</text></g>
+          <g id="n-safe" class="node"><rect class="glow" x="570" y="232" width="210" height="56" rx="16"/><rect x="570" y="232" width="210" height="56" rx="16"/>
+            <text class="k" x="590" y="254">FAST PATH</text><text x="590" y="276">Answered instantly</text></g>
+          <g id="n-out" class="node"><rect class="glow" x="830" y="139" width="150" height="72" rx="16"/><rect x="830" y="139" width="150" height="72" rx="16"/>
+            <text class="k" x="850" y="167">VERDICT</text><text x="850" y="191" id="outLabel">Waiting</text></g>
+          <circle id="pulse" class="pulse" r="6" cx="0" cy="0" opacity="0"/>
+        </svg>
+      </div>
+
+      <div class="below">
+        <div class="panel"><h2>What the agent is doing</h2><ol class="trace" id="trace"><li class="placeholder" style="display:block">Paste a message and press <b>Check</b> to see each step here.</li></ol></div>
+        <div class="panel" id="result"><h2>Result</h2><p class="placeholder">The verdict, the reasons and the evidence will appear here.</p></div>
+      </div>
+    </section>
+  </div>
+  <footer>Xvimo gives guidance, not a guarantee. When money is involved, always confirm through official channels. · Built for the Nebius x NVIDIA Global AI Hackathon.</footer>
+</div>
+
+<script>
+  // Set this to your waitlist page (e.g. your GitHub Pages link) to enable the button.
+  const WAITLIST_URL = "";
+
+  const EXAMPLES = [
+    ["Fake CBN alert", "Dear Customer: CBN has blocked your ATM card due to incomplete BVN registration. Call our help line on 0803 000 0000 for reactivation."],
+    ["Ponzi offer", "Invest ₦50,000 today and earn ₦200,000 every week. Only 10 slots left — pay now to secure your slot!"],
+    ["Fake job", "Congratulations! You have been shortlisted for an interview at our Ikeja office. Come with your CV and ₦5,000 for the aptitude test form."],
+    ["Real cashback alert", "Dear Customer, your account has been credited with N30.0 cashback. Earn more cashback when you recharge or pay bills using Smartcash! #CashbackReloaded"],
+    ["Pidgin loan", "Abeg send me 20k make I release your loan, e go enter your account today."],
+    ["Bolt receipt", "Your trip with Bolt ended. Total fare: N2,350. Rate your driver in the app."],
+  ];
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "#";
+  const LABEL = { likely_scam: "🚨 Likely scam", suspicious: "⚠️ Suspicious", no_red_flags: "✅ No red flags found" };
+  const SHORT = { likely_scam: "Likely scam", suspicious: "Suspicious", no_red_flags: "No red flags" };
+  const TONE = { likely_scam: "risk", suspicious: "warn", no_red_flags: "safe" };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  if (WAITLIST_URL) $("waitlist").href = WAITLIST_URL; else $("waitlist").style.display = "none";
+  $("chips").innerHTML = EXAMPLES.map(([l], i) => `<button class="chip" type="button" data-i="${i}">${esc(l)}</button>`).join("");
+  $("chips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) { $("msg").value = EXAMPLES[b.dataset.i][1]; count(); } });
+  const count = () => $("chars").textContent = `${$("msg").value.length} / 1500`;
+  $("msg").addEventListener("input", count);
+
+  /* ---------- flow animation, driven by real events ---------- */
+  let anim = Promise.resolve();
+  const queueAnim = fn => (anim = anim.then(fn).catch(() => {}));
+  function node(id, ...cls) { const n = $("n-" + id); n.classList.remove("busy"); n.classList.add("on", ...cls); }
+  function busy(id) { $("n-" + id).classList.add("busy"); }
+  function travel(edgeId, ms = 550, outAndBack = false) {
+    const edge = $(edgeId); edge.classList.add("lit");
+    if (reduce) return Promise.resolve();
+    const pulse = $("pulse"), len = edge.getTotalLength();
+    pulse.setAttribute("opacity", 1);
+    return new Promise(res => {
+      const t0 = performance.now();
+      (function frame(now) {
+        const p = Math.min((now - t0) / ms, 1);
+        const d = outAndBack ? (p < .5 ? p * 2 : (1 - p) * 2) * len : p * len;
+        const pt = edge.getPointAtLength(d); pulse.setAttribute("cx", pt.x); pulse.setAttribute("cy", pt.y);
+        if (p < 1) requestAnimationFrame(frame); else { pulse.setAttribute("opacity", 0); res(); }
+      })(t0);
+    });
+  }
+  function resetFlow() {
+    document.querySelectorAll(".node").forEach(n => n.classList.remove("on", "busy", "risk", "warn", "safe"));
+    document.querySelectorAll(".edge").forEach(e => e.classList.remove("lit"));
+    $("outLabel").textContent = "Waiting"; $("nanoLabel").textContent = "Read and route"; $("ultraLabel").textContent = "Investigate";
+  }
+
+  /* ---------- trace ---------- */
+  let t0 = 0;
+  function step(html) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="t">${((performance.now() - t0) / 1000).toFixed(1)}s</span><span class="s">${html}</span>`;
+    $("trace").appendChild(li);
+  }
+
+  function handle(ev) {
+    if (ev.type === "stage" && ev.stage === "triage") {
+      queueAnim(async () => { node("msg"); await travel("e-msg-nano"); busy("nano"); });
+      step(`<b>Nemotron Nano</b> is reading the message…`);
+    } else if (ev.type === "triage") {
+      const flags = (ev.red_flags || []).length ? ` Red flags: ${ev.red_flags.map(esc).join(", ")}.` : "";
+      step(`Triage: <b>${esc(SHORT[ev.verdict] || ev.verdict)}</b>, confidence ${Number(ev.confidence || 0).toFixed(2)}, ${esc(ev.language || "")}.${flags}`);
+      step(`Routing: ${esc(ev.route_reason)}`);
+      queueAnim(async () => {
+        node("nano"); $("nanoLabel").textContent = `${ev.latency_s ?? "–"} s`;
+        if (ev.route === "final") { await travel("e-nano-safe"); node("safe"); }
+        else { await travel("e-nano-ultra"); busy("ultra"); }
+      });
+    } else if (ev.type === "stage" && ev.stage === "agent") {
+      step(`<b>Nemotron Ultra</b> agent is deciding what to check…`);
+    } else if (ev.type === "search") {
+      const tool = ev.tool === "search_regulators" ? "regulator sites" : "the web";
+      const top = (ev.top || []).slice(0, 2).map(s => `<span class="src">${esc(s.title || s.url)}</span>`).join("");
+      step(`Searched ${tool} for <span class="q">${esc(ev.query)}</span> → ${ev.results} results${top}`);
+      queueAnim(async () => {
+        const id = ev.tool === "search_regulators" ? "reg" : "web";
+        await travel(ev.tool === "search_regulators" ? "e-ultra-reg" : "e-ultra-web", 1000, true); node(id);
+      });
+    } else if (ev.type === "result") {
+      queueAnim(async () => {
+        if (ev.decided_by === "ultra_agent") { node("ultra"); $("ultraLabel").textContent = `${ev.search_count} searches`; await travel("e-ultra-out"); }
+        else await travel("e-safe-out");
+        node("out", TONE[ev.verdict] || "warn"); $("outLabel").textContent = SHORT[ev.verdict] || "Checked";
+        showResult(ev);
+      });
+      step(`Done in <b>${ev.total_latency_s} s</b>.`);
+    } else if (ev.type === "error") {
+      $("err").textContent = ev.message;
+    }
+  }
+
+  function showResult(ev) {
+    const evidence = (ev.evidence || []).map(e => `<a href="${esc(safeUrl(e.url))}" target="_blank" rel="noopener noreferrer">${esc(e.finding)}<span>${esc(e.url)}</span></a>`).join("");
+    const who = ev.decided_by === "nano" ? "Nemotron Nano · fast path" : "Nemotron Ultra agent + Tavily";
+    $("result").innerHTML = `<h2>Result</h2>
+      <p class="verdict ${esc(ev.verdict)}">${esc(LABEL[ev.verdict] || ev.verdict)}</p>
+      <p class="reply">${esc(ev.reply || ev.reason || "")}</p>
+      ${evidence ? `<div class="ev">${evidence}</div>` : ""}
+      <div class="stats"><span class="stat">${esc(who)}</span><span class="stat">${ev.total_latency_s} s</span>
+        ${ev.search_count ? `<span class="stat">${ev.search_count} searches</span>` : ""}
+        ${ev.dropped_citations ? `<span class="stat">${ev.dropped_citations} unverified citation removed</span>` : ""}</div>`;
+  }
+
+  /* ---------- run a check ---------- */
+  $("go").addEventListener("click", async () => {
+    const message = $("msg").value.trim();
+    $("err").textContent = "";
+    if (!message) { $("err").textContent = "Paste a message to check."; return; }
+    $("go").disabled = true; $("go").textContent = "Checking…";
+    resetFlow(); anim = Promise.resolve(); t0 = performance.now();
+    $("trace").innerHTML = ""; $("result").innerHTML = `<h2>Result</h2><p class="placeholder">Working on it…</p>`;
+    try {
+      const res = await fetch("/demo/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message }) });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || "The check could not start."); }
+      const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n")) >= 0) { const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1); if (line) handle(JSON.parse(line)); }
+      }
+      await anim;
+    } catch (e) {
+      $("err").textContent = e.message || "Something went wrong. Please try again.";
+    } finally {
+      $("go").disabled = false; $("go").textContent = "Check this message";
+    }
+  });
+</script>
+</body>
+</html>

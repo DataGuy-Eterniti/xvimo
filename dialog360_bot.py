@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, Request
 
 from dashboard import router as dashboard_router
+from demo import router as demo_router
 from events import log_check
 
 load_dotenv(override=True)
@@ -66,6 +67,7 @@ def extract_messages(data: dict) -> list:
 # ---------------------------------------------------------------- FastAPI app
 app = FastAPI(title="Xvimo WhatsApp bot (360dialog sandbox)")
 app.include_router(dashboard_router)
+app.include_router(demo_router)
 _seen = OrderedDict()
 _seen_lock = threading.Lock()
 

@@ -68,6 +68,7 @@ def main():
     print("\n" + "=" * 64)
     print(" Xvimo is running.")
     print(f" WhatsApp webhook : {url}/webhook")
+    print(f" Live web demo    : {url}/demo")
     print(f" Admin dashboard  : {url}/admin?token={token}" if token else
           " Admin dashboard  : set ADMIN_TOKEN in .env to enable it")
     print(" Press Ctrl + C to stop everything.")

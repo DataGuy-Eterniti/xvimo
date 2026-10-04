@@ -116,6 +116,9 @@ def _execute_tool(name: str, arguments: str, trace: dict) -> str:
         query = ""
     results = _run_search(query, regulators_only=(name == "search_regulators")) if query else []
     trace["searches"].append({"tool": name, "query": query, "results": len(results)})
+    if trace.get("on_event"):
+        trace["on_event"]({"type": "search", "tool": name, "query": query, "results": len(results),
+                           "top": [{"title": r.get("title", "")[:90], "url": r.get("url", "")} for r in results[:3] if r.get("url")]})
     for r in results:
         if r.get("url"):
             trace["seen_urls"].add(r["url"])
@@ -212,11 +215,15 @@ def _loop_json_actions(messages: list, trace: dict) -> str:
 
 
 # ---------------------------------------------------------------- public entry point
-def investigate(message: str, triage_result: dict) -> dict:
-    """Investigate an escalated message and return a final, cited verdict."""
+def investigate(message: str, triage_result: dict, on_event=None) -> dict:
+    """Investigate an escalated message and return a final, cited verdict.
+
+    on_event (optional) receives live progress events, e.g. each search the agent decides to run.
+    """
     started = time.time()
     language = triage_result.get("language") or "english"
-    trace = {"searches": [], "seen_urls": set(), "input_tokens": 0, "output_tokens": 0, "mode": "tools"}
+    trace = {"searches": [], "seen_urls": set(), "input_tokens": 0, "output_tokens": 0, "mode": "tools",
+             "on_event": on_event}
 
     triage_summary = {k: triage_result.get(k) for k in
                       ("verdict", "scam_type", "organizations", "urls", "promised_returns", "red_flags")}
