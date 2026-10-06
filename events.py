@@ -32,6 +32,7 @@ def log_check(channel: str, sender: str, message: str, first: dict, result: dict
             "language": first.get("language"),
             "verdict": result.get("verdict"),
             "scam_type": result.get("scam_type") or first.get("scam_type"),
+            "harmful": result.get("harmful") or first.get("harmful") or "none",
             "decided_by": decided_by,
             "triage_verdict": first.get("verdict"),
             "triage_confidence": first.get("confidence"),

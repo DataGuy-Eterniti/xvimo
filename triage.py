@@ -27,6 +27,7 @@ Analyse it and reply with ONLY a JSON object, no other text, using exactly these
   "money_requested": true or false,
   "promised_returns": short text of any promised profit or prize, or "",
   "red_flags": [short phrases, at most 5],
+  "harmful": "none" | "harassment" | "sexual" | "threat" — abusive, sexual or threatening content, separate from scams,
   "needs_web_check": true if an organization, platform or link should be verified online,
   "needs_escalation": true if the case is ambiguous and needs deeper reasoning,
   "reason": one plain sentence a non-technical person can understand,
@@ -67,6 +68,13 @@ Guidance:
   urgency and limited slots, requests for PIN/OTP/BVN or card details, look-alike links,
   someone claiming a new number who asks for money, and threats.
 - Use "suspicious" when there are some warning signs but you cannot be sure.
+- HARMFUL CONTENT is judged separately from scams. Set "harmful" when the message contains insults or bullying
+  ("harassment"), sexual remarks, propositions or explicit content ("sexual"), or threats of violence, blackmail or
+  exposure ("threat"). A harmful message can still be "no_red_flags" as a scam. For harmful messages the "reply" must
+  NOT call the message fine or safe: say it is abusive, that the user does not have to respond, and that they can
+  block and report the sender. Never repeat explicit words in the reply.
+- Sexual content combined with requests for money, gifts, photos, video calls or "verification" is a sextortion or
+  romance scam: verdict "likely_scam", scam_type "romance", harmful "sexual" (or "threat" if it threatens exposure).
 - Nigerian fraud slang such as "maga", "mugu", "yahoo" or "format" is a red flag: the message may come from,
   or be about, a fraudster. Mark it at least "suspicious".
 - Placeholders like [NAME], [PHONE], [ACCOUNT], [EMAIL] and [AMOUNT] hide private details. The ACTION around them
@@ -186,6 +194,8 @@ def triage(message: str) -> dict:
         result = _extract_json(raw)
         if result.get("verdict") not in ALLOWED_VERDICTS:
             result["verdict"] = "suspicious"
+        if result.get("harmful") not in ("harassment", "sexual", "threat"):
+            result["harmful"] = "none"
         result["parse_ok"] = True
     except (ValueError, json.JSONDecodeError):
         result = {"verdict": "suspicious", "reason": "Model reply could not be parsed", "parse_ok": False}

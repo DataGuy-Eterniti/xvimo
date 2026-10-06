@@ -22,6 +22,7 @@ def check(message: str) -> dict:
     else:
         deep = investigate(message, first)
         final = {**deep, "decided_by": "ultra_agent", "triage": first}
+        final.setdefault("harmful", first.get("harmful", "none"))
     final["total_latency_s"] = round(time.time() - started, 2)
     return final
 

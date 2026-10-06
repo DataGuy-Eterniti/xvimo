@@ -84,6 +84,8 @@
   .verdict { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
   .verdict.likely_scam { color: var(--risk); } .verdict.suspicious { color: var(--amber); } .verdict.no_red_flags { color: var(--green); }
   .reply { color: #D6E1F2; margin: 0 0 12px; white-space: pre-wrap; }
+  .tip { margin: 0 0 10px; padding: 8px 10px; border-left: 3px solid var(--amber); background: rgba(255,194,75,.08);
+    color: #E9DDBF; font-size: 13.5px; border-radius: 6px; }
   .ev { display: grid; gap: 8px; margin: 0 0 12px; }
   .ev a { display: block; text-decoration: none; background: var(--panel-2); border-radius: 10px; padding: 8px 10px; font-size: 13px; color: #D6E1F2; }
   .ev a span { display: block; color: var(--cyan); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -160,6 +162,23 @@
 
   @media (max-width: 1080px) { .float { display: none; } .topnav .links { display: none; } }
   @media (max-width: 640px) { .hero { padding: 12px 14px 20px; } .ribbonWrap { margin-top: 18px; } .announce { font-size: 12px; } }
+
+  /* screenshot upload */
+  .drop { position: relative; }
+  .drop.dragging textarea { border-color: var(--green); background: #0F2A22; }
+  .attach { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .attachBtn { display: inline-flex; align-items: center; gap: 8px; background: var(--panel-2); border: 1px dashed #2E4067;
+    color: #D6E1F2; border-radius: 12px; padding: 8px 14px; font: inherit; font-size: 13.5px; cursor: pointer; }
+  .attachBtn:hover { border-color: var(--cyan); }
+  .attachHint { color: var(--muted); font-size: 12.5px; }
+  .thumb { display: none; align-items: center; gap: 10px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 6px 8px 6px 6px; }
+  .thumb.show { display: inline-flex; }
+  .thumb img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; }
+  .thumb span { font-size: 13px; color: #D6E1F2; }
+  .thumb button { border: 0; background: var(--line); color: var(--text); border-radius: 999px; width: 24px; height: 24px; cursor: pointer; }
+  .readText { display: block; margin-top: 4px; padding: 6px 8px; border-left: 2px solid var(--cyan); background: rgba(0,229,255,.05);
+    color: #C4D2E6; font-size: 12.5px; white-space: pre-wrap; max-height: 110px; overflow: auto; }
 </style>
 </head>
 <body>
@@ -207,6 +226,7 @@
     <div class="built"><span>Built with</span>
       <span class="wm">NVIDIA Nemotron<small>Nano + Ultra</small></span>
       <span class="wm">Nebius<small>Token Factory</small></span>
+      <span class="wm">MiniCPM-V<small>screenshots</small></span>
       <span class="wm">Tavily<small>web search</small></span>
       <span class="wm">WhatsApp<small>channel</small></span>
     </div>
@@ -224,7 +244,16 @@
       <h2 class="demoTitle">Paste a suspicious message. <span class="x">Watch the agent check it.</span></h2>
       <p class="lede">This is the same AI that answers on WhatsApp. Every step on the right is happening for real.</p>
       <label for="msg" class="sr" style="position:absolute;left:-9999px">Message to check</label>
-      <textarea id="msg" maxlength="1500" placeholder="e.g. Dear Customer, your BVN has been blocked. Call our help line to reactivate…"></textarea>
+      <div class="drop" id="drop">
+        <textarea id="msg" maxlength="1500" placeholder="Paste the message — or drop / paste a screenshot here"></textarea>
+      </div>
+      <div class="attach">
+        <button class="attachBtn" id="attachBtn" type="button">📷 Add a screenshot</button>
+        <input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>
+        <span class="thumb" id="thumb"><img id="thumbImg" alt="Screenshot preview"><span>Screenshot added</span>
+          <button type="button" id="thumbX" aria-label="Remove screenshot">×</button></span>
+        <span class="attachHint" id="attachHint">Most scams arrive as screenshots — Xvimo reads them too.</span>
+      </div>
       <div class="meta"><span>Try one of these:</span><span id="chars">0 / 1500</span></div>
       <div class="chips" id="chips"></div>
       <button class="go" id="go" type="button">Check this message</button>
@@ -245,7 +274,7 @@
           <path id="e-ultra-out"  class="edge" d="M780 100 C 815 100, 805 175, 830 175"/>
           <path id="e-safe-out"   class="edge" d="M780 260 C 815 260, 805 175, 830 175"/>
           <g id="n-msg" class="node"><rect class="glow" x="6" y="139" width="200" height="72" rx="16"/><rect x="6" y="139" width="200" height="72" rx="16"/>
-            <text class="k" x="26" y="167">YOUR MESSAGE</text><text x="26" y="191">Received</text></g>
+            <text class="k" x="26" y="167">YOUR MESSAGE</text><text x="26" y="191" id="msgLabel">Received</text></g>
           <g id="n-nano" class="node"><rect class="glow" x="284" y="139" width="220" height="72" rx="16"/><rect x="284" y="139" width="220" height="72" rx="16"/>
             <text class="k" x="304" y="167">TRIAGE · NEMOTRON NANO</text><text x="304" y="191" id="nanoLabel">Read and route</text></g>
           <g id="n-ultra" class="node"><rect class="glow" x="570" y="72" width="210" height="56" rx="16"/><rect x="570" y="72" width="210" height="56" rx="16"/>
@@ -273,7 +302,7 @@
 
 <script>
   // Set this to your waitlist page (e.g. your GitHub Pages link) to enable the button.
-  const WAITLIST_URL = "https://dataguy-eterniti.github.io/xvimo-waitlist/?ref=demo";
+  const WAITLIST_URL = "";
 
   const EXAMPLES = [
     ["Fake CBN alert", "Dear Customer: CBN has blocked your ATM card due to incomplete BVN registration. Call our help line on 0803 000 0000 for reactivation."],
@@ -298,11 +327,11 @@
   /* ---------- hero ribbon: scam messages flowing through the scanner ---------- */
   (function ribbon() {
     const LINES = ["NVIDIA Nemotron 3 Nano — triage", "NVIDIA Nemotron 3 Ultra — investigator agent",
-      "Nebius Token Factory — inference", "Tavily — web + regulator search", "Native tool calling",
+      "Nebius Token Factory — inference", "MiniCPM-V — screenshot reading", "Tavily — web + regulator search", "Native tool calling",
       "Verified citations", "WhatsApp via 360dialog", "Python · FastAPI", "Live streaming agent trace",
       "300-message labelled benchmark"];
     const VERDICTS = [["Nemotron 3 Nano · triage in ~2.7 s", "safe"], ["Nemotron 3 Ultra · agent with tool calling", "safe"],
-      ["Nebius Token Factory · Nano at $0.06 / 1M tokens", "safe"], ["Tavily · regulator-only search", "safe"],
+      ["Nebius Token Factory · Nano at $0.06 / 1M tokens", "safe"], ["Tavily · regulator-only search", "safe"], ["MiniCPM-V on Nebius · reads screenshots", "safe"],
       ["Tiered routing · ~70% answered by Nano", "safe"], ["WhatsApp · live via 360dialog", "safe"]];
     const text = LINES.join("      ◆      ") + "      ◆      ";
     const raw = $("tpRaw"), chk = $("tpChk");
@@ -335,6 +364,36 @@
   const count = () => $("chars").textContent = `${$("msg").value.length} / 1500`;
   $("msg").addEventListener("input", count);
 
+  /* ---------- screenshot input ---------- */
+  let imageData = null;  // data URL, downscaled
+  function setImage(dataUrl) {
+    imageData = dataUrl;
+    $("thumb").classList.toggle("show", !!dataUrl); $("attachHint").style.display = dataUrl ? "none" : "";
+    if (dataUrl) $("thumbImg").src = dataUrl;
+  }
+  function loadFile(file) {
+    if (!file || !/^image\/(png|jpe?g|webp)$/.test(file.type)) { $("err").textContent = "Please use a PNG, JPG or WebP screenshot."; return; }
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const c = document.createElement("canvas"); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      setImage(c.toDataURL("image/jpeg", 0.88)); URL.revokeObjectURL(url); $("err").textContent = "";
+    };
+    img.onerror = () => { $("err").textContent = "That image could not be opened."; URL.revokeObjectURL(url); };
+    img.src = url;
+  }
+  $("attachBtn").addEventListener("click", () => $("file").click());
+  $("file").addEventListener("change", e => { loadFile(e.target.files[0]); e.target.value = ""; });
+  $("thumbX").addEventListener("click", () => setImage(null));
+  $("msg").addEventListener("paste", e => {
+    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+    if (item) { e.preventDefault(); loadFile(item.getAsFile()); }
+  });
+  ["dragenter", "dragover"].forEach(t => $("drop").addEventListener(t, e => { e.preventDefault(); $("drop").classList.add("dragging"); }));
+  ["dragleave", "drop"].forEach(t => $("drop").addEventListener(t, e => { e.preventDefault(); $("drop").classList.remove("dragging"); }));
+  $("drop").addEventListener("drop", e => loadFile(e.dataTransfer.files[0]));
+
   /* ---------- flow animation, driven by real events ---------- */
   let anim = Promise.resolve();
   const queueAnim = fn => (anim = anim.then(fn).catch(() => {}));
@@ -358,7 +417,7 @@
   function resetFlow() {
     document.querySelectorAll(".node").forEach(n => n.classList.remove("on", "busy", "risk", "warn", "safe"));
     document.querySelectorAll(".edge").forEach(e => e.classList.remove("lit"));
-    $("outLabel").textContent = "Waiting"; $("nanoLabel").textContent = "Read and route"; $("ultraLabel").textContent = "Investigate";
+    $("outLabel").textContent = "Waiting"; $("nanoLabel").textContent = "Read and route"; $("msgLabel").textContent = "Received"; $("ultraLabel").textContent = "Investigate";
   }
 
   /* ---------- trace ---------- */
@@ -370,7 +429,14 @@
   }
 
   function handle(ev) {
-    if (ev.type === "stage" && ev.stage === "triage") {
+    if (ev.type === "stage" && ev.stage === "vision") {
+      queueAnim(async () => { busy("msg"); });
+      step(`<b>Reading the screenshot</b> with ${esc((ev.model || "").split("/").pop())}…`);
+    } else if (ev.type === "vision") {
+      const who = ev.sender ? ` From: <b>${esc(ev.sender)}</b>.` : "";
+      step(`Screenshot read in ${ev.latency_s} s.${who}<span class="readText">${esc(ev.text)}</span>`);
+      queueAnim(async () => { node("msg"); $("msgLabel").textContent = "Screenshot read"; });
+    } else if (ev.type === "stage" && ev.stage === "triage") {
       queueAnim(async () => { node("msg"); await travel("e-msg-nano"); busy("nano"); });
       step(`<b>Nemotron Nano</b> is reading the message…`);
     } else if (ev.type === "triage") {
@@ -396,7 +462,9 @@
       queueAnim(async () => {
         if (ev.decided_by === "ultra_agent") { node("ultra"); $("ultraLabel").textContent = `${ev.search_count} searches`; await travel("e-ultra-out"); }
         else await travel("e-safe-out");
-        node("out", TONE[ev.verdict] || "warn"); $("outLabel").textContent = SHORT[ev.verdict] || "Checked";
+        const harmful = !!HARM[ev.harmful];
+        node("out", harmful && ev.verdict === "no_red_flags" ? "warn" : (TONE[ev.verdict] || "warn"));
+        $("outLabel").textContent = harmful && ev.verdict === "no_red_flags" ? "Harmful" : (SHORT[ev.verdict] || "Checked");
         showResult(ev);
       });
       step(`Done in <b>${ev.total_latency_s} s</b>.`);
@@ -405,12 +473,19 @@
     }
   }
 
+  const HARM = { harassment: "⚠️ Abusive message", sexual: "⚠️ Sexual harassment", threat: "🚩 Threatening message" };
+  function headline(ev) {
+    if (!HARM[ev.harmful]) return LABEL[ev.verdict] || ev.verdict;
+    return ev.verdict === "no_red_flags" ? HARM[ev.harmful] : `${LABEL[ev.verdict]} · ${HARM[ev.harmful].replace(/^\S+\s/, "")}`;
+  }
+  const harmClass = ev => HARM[ev.harmful] ? (ev.verdict === "no_red_flags" ? "suspicious" : ev.verdict) : ev.verdict;
   function showResult(ev) {
     const evidence = (ev.evidence || []).map(e => `<a href="${esc(safeUrl(e.url))}" target="_blank" rel="noopener noreferrer">${esc(e.finding)}<span>${esc(e.url)}</span></a>`).join("");
     const who = ev.decided_by === "nano" ? "Nemotron Nano · fast path" : "Nemotron Ultra agent + Tavily";
     $("result").innerHTML = `<h2>Result</h2>
-      <p class="verdict ${esc(ev.verdict)}">${esc(LABEL[ev.verdict] || ev.verdict)}</p>
+      <p class="verdict ${esc(harmClass(ev))}">${esc(headline(ev))}</p>
       <p class="reply">${esc(ev.reply || ev.reason || "")}</p>
+      ${(ev.safety || []).map(t => `<p class="tip">${esc(t)}</p>`).join("")}
       ${evidence ? `<div class="ev">${evidence}</div>` : ""}
       <div class="stats"><span class="stat">${esc(who)}</span><span class="stat">${ev.total_latency_s} s</span>
         ${ev.search_count ? `<span class="stat">${ev.search_count} searches</span>` : ""}
@@ -421,12 +496,12 @@
   $("go").addEventListener("click", async () => {
     const message = $("msg").value.trim();
     $("err").textContent = "";
-    if (!message) { $("err").textContent = "Paste a message to check."; return; }
+    if (!message && !imageData) { $("err").textContent = "Paste a message or add a screenshot to check."; return; }
     $("go").disabled = true; $("go").textContent = "Checking…";
     resetFlow(); anim = Promise.resolve(); t0 = performance.now();
     $("trace").innerHTML = ""; $("result").innerHTML = `<h2>Result</h2><p class="placeholder">Working on it…</p>`;
     try {
-      const res = await fetch("/demo/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message }) });
+      const res = await fetch("/demo/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, image: imageData }) });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || "The check could not start."); }
       const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
       for (;;) {
