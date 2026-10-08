@@ -176,11 +176,12 @@
       <div class="ghead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Report</div>
       <a class="item active" href="#top">Overview</a>
       <a class="item" href="#analysis">Deep analysis</a>
+      <a class="item" href="#people">People</a>
     </div>
     <div class="group">
       <div class="ghead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Channels</div>
-      <div class="item">WhatsApp <span class="tag">live</span></div>
-      <div class="item">Web demo <span class="tag off">soon</span></div>
+      <a class="item" id="lnkWa" target="_blank" rel="noopener">WhatsApp <span class="tag">live</span></a>
+      <a class="item" id="lnkDemo" href="/demo" target="_blank" rel="noopener">Web demo <span class="tag">live</span></a>
     </div>
     <div class="group">
       <div class="ghead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Verdicts</div>
@@ -216,7 +217,7 @@
 
         <div class="card s6">
           <div class="head"><h2>Messages checked vs flagged</h2>
-            <div class="legend"><span>Checked<i style="border-color:var(--cyan)"></i></span><span>Flagged<i style="border-color:var(--green);border-top-style:dotted"></i></span></div></div>
+            <div class="legend"><span>People<i style="border-color:#2E6BFF"></i></span><span>Checked<i style="border-color:var(--cyan)"></i></span><span>Flagged<i style="border-color:var(--green);border-top-style:dotted"></i></span></div></div>
           <div class="box line"><canvas id="cDaily"></canvas></div>
         </div>
 
@@ -249,6 +250,13 @@
     <div class="divider" id="analysis"><h2>Breakdown and deep analysis</h2><p id="updated">Loading…</p></div>
 
     <div class="grid">
+      <div class="card g2" id="people"><h2>People using Xvimo</h2>
+        <p class="hint">Counted without sign-in: a random ID per browser, a scrambled code per WhatsApp number.</p>
+        <div class="figs" id="aud"></div></div>
+      <div class="card g2"><h2>Where people came from</h2>
+        <p class="hint">First link each web visitor arrived from. Add ?ref=linkedin (or whatsapp, x…) to links you share.</p>
+        <div class="bars2" id="sources"></div></div>
+
       <div class="card g2" id="accuracy"><h2>Accuracy</h2>
         <p class="hint">The tuning sample is optimistic; the unseen sample is the honest number.</p><div id="bench" style="margin-top:12px"></div></div>
       <div class="card g2"><h2>Speed and cost</h2>
@@ -347,6 +355,9 @@ function renderRecent() {
 function render(d) {
   lastData = d;
   const L = d.live, D = d.deep, P = d.platform;
+  const wa = document.getElementById("lnkWa"), links = d.links || {};
+  if (links.whatsapp) { wa.href = links.whatsapp; wa.title = "Open the Xvimo WhatsApp chat"; }
+  else { wa.removeAttribute("href"); wa.title = "Set WHATSAPP_CHAT_URL to make this clickable"; }
   if (d.brands.xvimo) document.getElementById("title").innerHTML = `<img src="/admin/brand/xvimo?${q}" alt="Xvimo">`;
   document.getElementById("updated").textContent = `Updated ${d.generated} · refreshes every 30 seconds`;
 
@@ -380,8 +391,9 @@ function render(d) {
         scales: { x: { display: false }, y: { display: false, beginAtZero: true } } } });
 
     draw("cDaily", { type: "line", data: { labels: L.daily.map(p => p.day.slice(5)), datasets: [
-        { label: "Checked", data: L.daily.map(p => p.checks), tension: .45, borderColor: "#00E5FF", borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 6 },
-        { label: "Flagged", data: L.daily.map(p => p.flagged), tension: .45, borderColor: "#39FF88", borderWidth: 2.5, borderDash: [2, 5], pointRadius: 0 }] },
+        { label: "People", data: L.daily.map(p => p.people || 0), tension: .35, borderColor: "#2E6BFF", borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: "#2E6BFF", pointHoverRadius: 6 },
+        { label: "Checked", data: L.daily.map(p => p.checks), tension: .35, borderColor: "#00E5FF", borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: "#00E5FF", pointHoverRadius: 6 },
+        { label: "Flagged", data: L.daily.map(p => p.flagged), tension: .35, borderColor: "#39FF88", borderWidth: 2.5, borderDash: [2, 5], pointRadius: 3, pointBackgroundColor: "#39FF88", pointHoverRadius: 6 }] },
       options: { interaction: { mode: "index", intersect: false },
         scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { color: "rgba(255,255,255,.09)" } } } } });
 
@@ -437,6 +449,15 @@ function render(d) {
 
   bars(document.getElementById("reasons"), D.escalation_reasons);
   bars(document.getElementById("outcomes"), D.agent_outcomes, true);
+
+  const AU = d.audience || {};
+  document.getElementById("aud").innerHTML = [
+    [AU.people ?? "—", "People in total"], [AU.today ?? "—", "People today"],
+    [AU.last_7_days ?? "—", "People in the last 7 days"], [AU.ran_a_check ?? "—", "Ran at least one check"],
+    [AU.returning ?? "—", "Came back on another day"], [pct(AU.conversion_pct), "Web visitors who ran a check"],
+    [AU.whatsapp_users ?? "—", "WhatsApp users"], [AU.checks_per_person ?? "—", "Checks per person"]]
+    .map(([v, k]) => `<div class="fig"><b>${esc(v)}</b><span>${k}</span></div>`).join("");
+  bars(document.getElementById("sources"), AU.sources);
 
   const S = D.latency;
   document.getElementById("spread").innerHTML = [

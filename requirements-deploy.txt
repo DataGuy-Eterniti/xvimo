@@ -5,3 +5,4 @@ python-dotenv>=1.0
 openai>=1.30
 tavily-python>=0.3
 python-multipart>=0.0.9
+psycopg[binary]>=3.1

@@ -6,13 +6,13 @@ Mounted by the WhatsApp bot at /admin. Protected by ADMIN_TOKEN from .env:
 import csv
 import os
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
-from events import load_events, load_feedback
+from events import load_events, load_feedback, load_visits
 from limits import usage
 from paths import RESULTS_DIR
 
@@ -37,22 +37,24 @@ PRICES = {
 PRICES_ARE_DEFAULTS = not any(os.getenv(k) for k in ("PRICE_NANO_IN", "PRICE_ULTRA_IN"))
 
 PLATFORM = {
-    "inference_now": "NVIDIA API catalog (build.nvidia.com)",
+    "inference_now": "Nebius Token Factory",
     "inference_target": "Nebius Token Factory",
-    "nebius_status": os.getenv("NEBIUS_STATUS", "Waiting for access — billing country not supported; organisers contacted"),
+    "nebius_status": os.getenv("NEBIUS_STATUS", "Live on Nebius Token Factory"),
     "on_nebius": "tokenfactory.nebius" in (os.getenv("LLM_BASE_URL") or ""),
     "nano_model": os.getenv("NANO_MODEL"),
     "ultra_model": os.getenv("ULTRA_MODEL"),
 }
 
 TECH_STACK = [
-    ("Triage model", "NVIDIA Nemotron 3 Nano Omni (30B, A3B)", "Reads every message, returns structured JSON"),
+    ("Triage model", "NVIDIA Nemotron 3 Nano (30B, A3B)", "Reads every message, returns structured JSON"),
     ("Investigator model", "NVIDIA Nemotron 3 Ultra (550B, A55B)", "Agent with tool calling for hard cases"),
+    ("Screenshot reader", "MiniCPM-V 4.5 (Gemma 3 27B fallback)", "Reads forwarded screenshots"),
     ("Web evidence", "Tavily Search", "Open web and Nigerian regulator sites"),
-    ("Inference", "Nebius Token Factory (target) · NVIDIA API (dev)", "OpenAI-compatible, switch via .env"),
-    ("Messaging", "WhatsApp via 360dialog sandbox", "Meta Cloud API test number as backup"),
-    ("Backend", "Python, FastAPI, Uvicorn", "Webhook server and this dashboard"),
-    ("Tunnel", "Cloudflare Tunnel", "Public HTTPS for local development"),
+    ("Inference", "Nebius Token Factory", "Every model call, OpenAI-compatible"),
+    ("Messaging", "WhatsApp via 360dialog sandbox", "Meta Cloud API number after business verification"),
+    ("Backend", "Python, FastAPI, Uvicorn", "Webhook server, web demo and this dashboard"),
+    ("Hosting", "Render (Docker image from GitHub Actions)", "Permanent public HTTPS link"),
+    ("Storage", "Neon Postgres", "Check history and feedback survive restarts"),
     ("Data", "300-message labelled benchmark", "Real + constructed, redacted"),
 ]
 
@@ -63,9 +65,12 @@ MILESTONES = [
     ("done", "Ultra investigator agent", "Chooses its own searches, verified citations"),
     ("done", "Live on WhatsApp", "End-to-end checks on a real phone"),
     ("done", "Admin dashboard", "Usage, routing, cost and benchmark analytics"),
-    ("next", "Web demo page", "One-click demo URL for judges"),
-    ("next", "Screenshot checks", "Nano Omni reads forwarded images"),
-    ("blocked", "Deploy on Nebius", "Waiting for Token Factory access"),
+    ("done", "Web demo page", "Live agent trace, one-click for judges"),
+    ("done", "Screenshot checks", "Vision model reads forwarded images"),
+    ("done", "Running on Nebius Token Factory", "All Nemotron calls via Nebius"),
+    ("done", "Public deployment", "Always-on link with lasting history"),
+    ("next", "Public beta launch", "Web first, 11 Oct 2026"),
+    ("blocked", "Own WhatsApp number", "Waiting for Meta business verification"),
     ("next", "Full 300-message benchmark", "Run once on the final pipeline"),
     ("next", "Demo video and submission", "Due Oct 30, 2026"),
 ]
@@ -163,6 +168,12 @@ def live_stats(events: list) -> dict:
     tool_counts = Counter(s.get("tool") for e in agent for s in e.get("searches", []))
     days = Counter(e["ts"][:10] for e in events)
     flagged_days = Counter(e["ts"][:10] for e in events if e.get("verdict") != "no_red_flags")
+    # Continuous run of days (zeros included) so the trend is a real line even with one active day:
+    # at least the last 7 days, at most the last 30.
+    end = datetime.now(timezone.utc).date()
+    first = min((datetime.fromisoformat(d).date() for d in days), default=end)
+    start = max(min(first, end - timedelta(days=6)), end - timedelta(days=29))
+    day_range = [(start + timedelta(days=i)).isoformat() for i in range((end - start).days + 1)]
     weekday_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     weekdays = Counter(datetime.fromisoformat(e["ts"]).weekday() for e in events)
     today = datetime.now().astimezone().date().isoformat()
@@ -185,7 +196,7 @@ def live_stats(events: list) -> dict:
         "cost": {"actual": round(actual, 5), "all_ultra": round(all_ultra, 5),
                  "saving_pct": round(100 * (1 - actual / all_ultra), 1) if all_ultra else None,
                  "prices": PRICES, "estimated": PRICES_ARE_DEFAULTS},
-        "daily": [{"day": d, "checks": days[d], "flagged": flagged_days.get(d, 0)} for d in sorted(days)],
+        "daily": [{"day": d, "checks": days.get(d, 0), "flagged": flagged_days.get(d, 0)} for d in day_range],
         "weekdays": [{"day": weekday_names[i], "checks": weekdays.get(i, 0)} for i in range(7)],
         "latency_series": [{"t": e["ts"][5:16].replace("T", " "), "s": e.get("total_latency_s"),
                             "by": e.get("decided_by")} for e in events[-30:]],
@@ -252,6 +263,46 @@ def _feedback_stats() -> dict:
             "helpful_pct": round(100 * up / len(votes), 1) if votes else None}
 
 
+def audience_stats(events: list, visits: list) -> dict:
+    """People, not messages: anonymous browser ids (web) and hashed numbers (WhatsApp). No sign-in needed."""
+    today = datetime.now(timezone.utc).date()
+    week_ago = (today - timedelta(days=6)).isoformat()
+    day = lambda r: (r.get("ts") or "")[:10]
+    web_visitors = {v["visitor"] for v in visits if v.get("visitor")}
+    checkers = {e["user"] for e in events if e.get("user")}
+    web_checkers = {e["user"] for e in events if e.get("user") and e.get("channel") == "web"}
+    wa_users = {e["user"] for e in events if e.get("user") and e.get("channel") == "whatsapp"}
+    people = web_visitors | checkers
+    active_days = {}
+    for r in [*visits, *events]:
+        uid = r.get("visitor") or r.get("user")
+        if uid:
+            active_days.setdefault(uid, set()).add(day(r))
+    first_source = {}
+    for v in sorted(visits, key=day):
+        first_source.setdefault(v.get("visitor"), v.get("source") or "direct")
+    in_range = lambda d0: {r.get("visitor") or r.get("user") for r in [*visits, *events]
+                           if (r.get("visitor") or r.get("user")) and day(r) >= d0}
+    per_day = {}
+    for r in [*visits, *events]:
+        uid = r.get("visitor") or r.get("user")
+        if uid:
+            per_day.setdefault(day(r), set()).add(uid)
+    return {
+        "people": len(people),
+        "today": len(in_range(today.isoformat())),
+        "last_7_days": len(in_range(week_ago)),
+        "web_visitors": len(web_visitors),
+        "ran_a_check": len(checkers),
+        "whatsapp_users": len(wa_users),
+        "returning": sum(1 for d in active_days.values() if len(d) >= 2),
+        "conversion_pct": round(100 * len(web_checkers & web_visitors) / len(web_visitors), 1) if web_visitors else None,
+        "checks_per_person": round(len(events) / len(checkers), 1) if checkers else None,
+        "sources": dict(Counter(first_source.values())),
+        "per_day": {d: len(u) for d, u in per_day.items()},
+    }
+
+
 def _check_token(request: Request):
     expected = os.getenv("ADMIN_TOKEN")
     if not expected:
@@ -287,10 +338,15 @@ def admin_page(request: Request):
 def admin_data(request: Request):
     _check_token(request)
     events = load_events()
+    audience = audience_stats(events, load_visits())
+    live = live_stats(events)
+    for p in live["daily"]:
+        p["people"] = audience["per_day"].get(p["day"], 0)
     return {
         "generated": datetime.now().strftime("%d %b %Y, %H:%M"),
         "platform": PLATFORM,
-        "live": live_stats(events),
+        "live": live,
+        "audience": audience,
         "deep": deep_stats(events),
         "benchmarks": benchmark_stats(),
         "tech_stack": [{"layer": a, "tool": b, "role": c} for a, b, c in TECH_STACK],
@@ -298,4 +354,5 @@ def admin_data(request: Request):
         "brands": {name: bool(_brand_path(name)) for name in BRAND_FILES},
         "feedback": _feedback_stats(),
         "usage_today": usage(),
+        "links": {"demo": "/demo", "whatsapp": os.getenv("WHATSAPP_CHAT_URL", "").strip()},
     }
