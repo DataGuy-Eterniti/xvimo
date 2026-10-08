@@ -157,6 +157,13 @@
     font-size: 13px; padding-top: 18px; }
   .built .wm { color: #C4D2E6; font-weight: 600; font-size: 16px; letter-spacing: .01em; }
   .built .wm small { color: var(--muted); font-weight: 400; font-size: 12.5px; margin-left: 6px; }
+  .built { gap: 22px; }
+  .built figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .built figure img { width: 104px; height: 52px; border-radius: 12px; display: block;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08); transition: transform .2s; }
+  .built figure:hover img { transform: translateY(-2px); }
+  .built figcaption { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  @media (max-width: 560px) { .built figure img { width: 84px; height: 42px; } .built { gap: 14px; } }
 
   /* section header for the live demo */
   .sectionHead { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap;
@@ -228,11 +235,11 @@
       </svg>
     </div>
     <div class="built"><span>Built with</span>
-      <span class="wm">NVIDIA Nemotron<small>Nano + Ultra</small></span>
-      <span class="wm">Nebius<small>Token Factory</small></span>
-      <span class="wm">MiniCPM-V<small>screenshots</small></span>
-      <span class="wm">Tavily<small>web search</small></span>
-      <span class="wm">WhatsApp<small>channel</small></span>
+      <figure><img src="/brand/nvidia.png" alt="NVIDIA" width="104" height="52"><figcaption>Nemotron Nano + Ultra</figcaption></figure>
+      <figure><img src="/brand/nebius.png" alt="Nebius" width="104" height="52"><figcaption>Token Factory</figcaption></figure>
+      <figure><img src="/brand/minicpm.png" alt="MiniCPM-V" width="104" height="52"><figcaption>Screenshots</figcaption></figure>
+      <figure><img src="/brand/tavily.png" alt="Tavily" width="104" height="52"><figcaption>Web search</figcaption></figure>
+      <figure><img src="/brand/whatsapp.png" alt="WhatsApp" width="104" height="52"><figcaption>Channel</figcaption></figure>
     </div>
   </div>
 </header>

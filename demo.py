@@ -14,7 +14,7 @@ import time
 from collections import defaultdict, deque
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
 import uuid
 
@@ -197,6 +197,16 @@ async def demo_feedback(request: Request):
 
 
 PRIVACY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "privacy.html")
+BRAND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "brand")
+
+
+@router.get("/brand/{name}", include_in_schema=False)
+def brand_file(name: str):
+    """Public tech-stack logo tiles used on the demo page (assets/brand/*.png)."""
+    path = os.path.join(BRAND_DIR, name)
+    if not re.fullmatch(r"[a-z0-9-]+\.png", name) or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/privacy", response_class=HTMLResponse)
