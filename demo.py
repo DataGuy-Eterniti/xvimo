@@ -16,7 +16,10 @@ from collections import defaultdict, deque
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
-from events import log_check
+import uuid
+
+from events import log_check, log_feedback
+from limits import CAP_MESSAGE, take_check
 
 router = APIRouter()
 HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "demo.html")
@@ -54,6 +57,7 @@ def _run(message: str, out: queue.Queue, image: tuple = None) -> None:
 
     emit = out.put
     started = time.time()
+    check_id = uuid.uuid4().hex[:16]
     try:
         if image:
             from vision import read_screenshot, screenshot_to_message
@@ -82,13 +86,13 @@ def _run(message: str, out: queue.Queue, image: tuple = None) -> None:
         elapsed = time.time() - started
         from safety import harm_of, safety_lines
         harm = harm_of(result, first)
-        emit({"type": "result", "decided_by": who, "verdict": result.get("verdict"),
+        emit({"type": "result", "id": check_id, "decided_by": who, "verdict": result.get("verdict"),
               "harmful": harm, "safety": safety_lines(harm),
               "confidence": result.get("confidence"), "scam_type": result.get("scam_type"),
               "reason": result.get("reason"), "reply": result.get("reply"),
               "evidence": (result.get("evidence") or [])[:3], "search_count": result.get("search_count", 0),
               "dropped_citations": result.get("dropped_citations", 0), "total_latency_s": round(elapsed, 2)})
-        log_check("web", "web-demo", message, first, result, who, elapsed)
+        log_check("web", "web-demo", message, first, result, who, elapsed, check_id)
     except Exception as exc:  # never leave the page hanging
         print("Demo pipeline error:", exc)
         emit({"type": "error", "message": "The check could not be completed. Please try again in a moment."})
@@ -125,6 +129,8 @@ async def demo_check(request: Request):
         raise HTTPException(status_code=400, detail=f"Please keep it under {MAX_CHARS} characters.")
     if not _allowed(_client_ip(request)):
         raise HTTPException(status_code=429, detail="You've run a lot of checks — please wait a few minutes.")
+    if not take_check():
+        raise HTTPException(status_code=429, detail=CAP_MESSAGE)
 
     out: queue.Queue = queue.Queue()
     threading.Thread(target=_run, args=(message, out, image), daemon=True).start()
@@ -138,3 +144,28 @@ async def demo_check(request: Request):
 
     return StreamingResponse(stream(), media_type="application/x-ndjson",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@router.post("/demo/feedback")
+async def demo_feedback(request: Request):
+    body = await request.json()
+    check_id = str(body.get("id", ""))[:40]
+    if not check_id:
+        raise HTTPException(status_code=400, detail="Missing check id.")
+    log_feedback(check_id, bool(body.get("helpful")), "web")
+    return {"ok": True}
+
+
+PRIVACY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "privacy.html")
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+def privacy_page():
+    with open(PRIVACY_PATH, encoding="utf-8") as f:
+        return f.read()
+
+
+@router.get("/", include_in_schema=False)
+def home():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/demo")

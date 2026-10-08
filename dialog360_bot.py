@@ -13,6 +13,7 @@ from collections import OrderedDict
 import requests
 from dotenv import load_dotenv
 
+from limits import CAP_MESSAGE, take_check
 from safety import HARM_HEADLINE, harm_of, safety_lines
 from fastapi import BackgroundTasks, FastAPI, Request
 
@@ -109,6 +110,9 @@ def handle_text(sender: str, text: str, skip_greeting: bool = False) -> None:
     if not skip_greeting and text.strip().lower() in GREETINGS:
         send_text(sender, WELCOME)
         return
+    if not take_check():
+        send_text(sender, CAP_MESSAGE)
+        return
     started = time.time()
     try:
         first = triage(text)
@@ -191,7 +195,7 @@ def handle_image(sender: str, image: dict) -> None:
         send_text(sender, "Sorry, I couldn't read that screenshot. Please try again, or paste the message text.")
 
 
-@app.get("/")
+@app.get("/health")
 def health():
     return {"status": "ok", "service": "xvimo-360dialog"}
 

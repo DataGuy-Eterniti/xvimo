@@ -362,6 +362,8 @@ function render(d) {
   document.getElementById("kToday").textContent = `+${L.today} today`;
   document.getElementById("kFlagged").textContent = L.flagged_total;
   document.getElementById("kFlagPct").textContent = pct(L.flagged_pct);
+  const F = d.feedback || {}, U = d.usage_today || {};
+  document.getElementById("kToday").textContent = `+${L.today} today` + (U.cap ? ` · cap ${U.cap}` : "");
   document.getElementById("nScam").textContent = L.verdicts.likely_scam || 0;
   document.getElementById("nSus").textContent = L.verdicts.suspicious || 0;
   document.getElementById("nSafe").textContent = L.verdicts.no_red_flags || 0;
@@ -418,6 +420,9 @@ function render(d) {
       <td class="num ${tone(r.accuracy, 90)}">${pct(r.accuracy)}</td><td class="num ${tone(r.recall, 95)}">${pct(r.recall)}</td>
       <td class="num ${r.false_alarm != null && r.false_alarm <= 10 ? "good" : "warn"}">${pct(r.false_alarm)}</td></tr>`).join("")}</tbody></table>`
     : `<div class="empty">Run <code>python run_triage_sample.py 25</code> or <code>python run_pipeline_sample.py 5 7</code> to fill this in.</div>`;
+  document.getElementById("bench").insertAdjacentHTML("beforeend", F.votes
+    ? `<p class="note" style="font-size:14px;color:var(--text)">Real users rated <b class="good">${pct(F.helpful_pct)}</b> of rated checks helpful (${F.helpful} 👍 / ${F.not_helpful} 👎, ${F.votes} votes).</p>`
+    : `<p class="note">User ratings (👍/👎 on the web demo) will appear here.</p>`);
 
   const C = L.cost, K = D.cost_per_check;
   document.getElementById("cost").innerHTML = L.total ? `<table><tbody>

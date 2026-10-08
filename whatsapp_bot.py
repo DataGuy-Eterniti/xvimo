@@ -12,6 +12,7 @@ from collections import OrderedDict
 import requests
 from dotenv import load_dotenv
 
+from limits import CAP_MESSAGE, take_check
 from safety import HARM_HEADLINE, harm_of, safety_lines
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse
@@ -106,6 +107,9 @@ def handle_text(sender: str, text: str, skip_greeting: bool = False) -> None:
     """Run the full Xvimo pipeline and reply. Runs after Meta has already received its 200 OK."""
     if not skip_greeting and text.strip().lower() in {"hi", "hello", "hey", "start", "help", "menu"}:
         send_text(sender, WELCOME)
+        return
+    if not take_check():
+        send_text(sender, CAP_MESSAGE)
         return
     send_text(sender, "🔍 Checking this message… this can take up to a minute for tricky cases.")
     try:

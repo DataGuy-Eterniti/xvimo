@@ -9,7 +9,7 @@ import re
 import threading
 from datetime import datetime, timezone
 
-EVENTS_PATH = os.path.join("data", "events.jsonl")
+from paths import EVENTS_PATH, FEEDBACK_PATH
 _lock = threading.Lock()
 
 
@@ -20,11 +20,12 @@ def _mask(text: str) -> str:
 
 
 def log_check(channel: str, sender: str, message: str, first: dict, result: dict,
-              decided_by: str, total_latency: float) -> None:
+              decided_by: str, total_latency: float, check_id: str = "") -> None:
     """Append one check to the event log. Never raises: logging must not break replies."""
     try:
         agent = result if decided_by == "ultra_agent" else {}
         record = {
+            "id": check_id,
             "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "channel": channel,
             "sender": (sender or "")[-4:],
@@ -46,7 +47,7 @@ def log_check(channel: str, sender: str, message: str, first: dict, result: dict
             "citations": len(agent.get("evidence") or []),
             "dropped_citations": agent.get("dropped_citations", 0),
         }
-        os.makedirs(os.path.dirname(EVENTS_PATH), exist_ok=True)
+        os.makedirs(os.path.dirname(EVENTS_PATH) or ".", exist_ok=True)
         with _lock, open(EVENTS_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
     except Exception as exc:  # pragma: no cover
@@ -58,6 +59,31 @@ def load_events() -> list:
         return []
     out = []
     with open(EVENTS_PATH, encoding="utf-8") as f:
+        for line in f:
+            try:
+                out.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return out
+
+
+def log_feedback(check_id: str, helpful: bool, channel: str = "web") -> None:
+    """Record a 👍/👎 rating for a check. Never raises."""
+    try:
+        os.makedirs(os.path.dirname(FEEDBACK_PATH) or ".", exist_ok=True)
+        rec = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"), "id": check_id[:40],
+               "helpful": bool(helpful), "channel": channel}
+        with _lock, open(FEEDBACK_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec) + "\n")
+    except Exception as exc:  # pragma: no cover
+        print("Feedback log failed:", exc)
+
+
+def load_feedback() -> list:
+    if not os.path.exists(FEEDBACK_PATH):
+        return []
+    out = []
+    with open(FEEDBACK_PATH, encoding="utf-8") as f:
         for line in f:
             try:
                 out.append(json.loads(line))

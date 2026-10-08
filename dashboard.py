@@ -12,7 +12,9 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
-from events import load_events
+from events import load_events, load_feedback
+from limits import usage
+from paths import RESULTS_DIR
 
 load_dotenv(override=True)
 router = APIRouter()
@@ -211,7 +213,7 @@ def _is_true(value) -> bool:
 
 def benchmark_stats() -> dict:
     out = {}
-    rows, when = _read_csv(os.path.join("results", "triage_sample.csv"))
+    rows, when = _read_csv(os.path.join(RESULTS_DIR, "triage_sample.csv"))
     if rows:
         ok = [r for r in rows if r.get("verdict") != "error"]
         scam = [r for r in ok if r["label"] == "scam"]
@@ -223,7 +225,7 @@ def benchmark_stats() -> dict:
             "nano_final_share": round(100 * len(final) / len(ok), 1) if ok else None,
             "nano_final_accuracy": _pct(final),
         }
-    rows, when = _read_csv(os.path.join("results", "pipeline_sample.csv"))
+    rows, when = _read_csv(os.path.join(RESULTS_DIR, "pipeline_sample.csv"))
     if rows:
         ok = [r for r in rows if r.get("verdict") != "error"]
         scam = [r for r in ok if r["label"] == "scam"]
@@ -237,6 +239,17 @@ def benchmark_stats() -> dict:
 
 def _pct(rows):
     return round(100 * sum(_is_true(r.get("correct")) for r in rows) / len(rows), 1) if rows else None
+
+
+def _feedback_stats() -> dict:
+    fb = load_feedback()
+    latest = {}
+    for f in fb:  # one vote per check: keep the latest
+        latest[f.get("id")] = f.get("helpful")
+    votes = list(latest.values())
+    up = sum(1 for v in votes if v)
+    return {"votes": len(votes), "helpful": up, "not_helpful": len(votes) - up,
+            "helpful_pct": round(100 * up / len(votes), 1) if votes else None}
 
 
 def _check_token(request: Request):
@@ -283,4 +296,6 @@ def admin_data(request: Request):
         "tech_stack": [{"layer": a, "tool": b, "role": c} for a, b, c in TECH_STACK],
         "milestones": [{"status": a, "title": b, "detail": c} for a, b, c in MILESTONES],
         "brands": {name: bool(_brand_path(name)) for name in BRAND_FILES},
+        "feedback": _feedback_stats(),
+        "usage_today": usage(),
     }
