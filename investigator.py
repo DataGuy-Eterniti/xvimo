@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from openai import APIConnectionError, BadRequestError, InternalServerError, RateLimitError
 from tavily import TavilyClient
 
-from triage import RETRY_WAITS, client
+from triage import RETRY_WAITS, client, language_guard
 
 load_dotenv(override=True)
 
@@ -89,7 +89,7 @@ When you are done, reply with ONLY this JSON object and nothing else:
   "scam_type": "ponzi" | "impersonation" | "fake_job" | "fake_loan" | "phishing_link" | "romance" | "fake_giveaway" | "advance_fee" | "other" | "none",
   "reason": "one or two plain sentences explaining the verdict",
   "evidence": [{{"finding": "what this source shows", "url": "exact URL from your search results"}}],
-  "reply": "a short WhatsApp-style message (max 70 words) in {language} to the user who forwarded the message for checking: the key reason and one safety tip. Do not start with the verdict label (the app adds it), and never answer as if you were the sender or recipient of the forwarded message"
+  "reply": "a short WhatsApp-style message (max 70 words) in {language} to the user who forwarded the message for checking: the key reason and one safety tip. Do not start with the verdict label (the app adds it), and never answer as if you were the sender or recipient of the forwarded message. Use standard English unless the forwarded message itself is written in Pidgin, Yoruba, Hausa or Igbo, and use no nicknames like Bro or Oga"
 }}
 Only cite URLs that appeared in your search results. Use an empty evidence list if you did not search."""
 
@@ -248,6 +248,8 @@ def investigate(message: str, triage_result: dict, on_event=None) -> dict:
     except (ValueError, json.JSONDecodeError):
         result = {"verdict": "suspicious", "confidence": 0.5, "reason": "Investigation could not be completed.",
                   "evidence": [], "reply": "", "parse_ok": False}
+
+    language_guard(message, result)
 
     # Keep only citations the agent actually retrieved, so it cannot invent sources.
     evidence = result.get("evidence") or []

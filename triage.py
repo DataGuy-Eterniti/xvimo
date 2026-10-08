@@ -32,7 +32,9 @@ Analyse it and reply with ONLY a JSON object, no other text, using exactly these
   "needs_escalation": true if the case is ambiguous and needs deeper reasoning,
   "reason": one plain sentence a non-technical person can understand,
   "reply": a short WhatsApp-style message (max 50 words) to the USER WHO FORWARDED the message to you for checking,
-           written in the SAME language as the message (Pidgin for Pidgin, Yoruba for Yoruba, etc.). Explain the key
+           written in the SAME language as the forwarded message. Default to clear, standard English; use Pidgin,
+           Yoruba, Hausa or Igbo ONLY when the forwarded message itself is written in that language. No nicknames
+           or slang greetings ("Bro", "Oga", "My guy"). Explain the key
            reason and give one safety tip. Never answer as if you were the sender or recipient of the forwarded message,
            and do not start with the verdict label (the app adds "Likely scam" / "No red flags" above your reply).
            For "no_red_flags", say you found no warning signs; never claim the message is definitely safe or "not a scam"
@@ -144,6 +146,26 @@ def route_for(result: dict, message: str = "") -> str:
     return "escalate"
 
 
+PIDGIN_MARKERS = re.compile(
+    r"\b(dis|dey|dem|abeg|wetin|una|wey|sabi|abi|oga|bros|no be|e be|make you|go call|no click|no send|fit lose|"
+    r"wahala|sharp sharp|na im|na so)\b", re.I)
+
+
+def _pidgin_score(text: str) -> int:
+    return len(PIDGIN_MARKERS.findall(text or ""))
+
+
+def language_guard(message: str, result: dict) -> dict:
+    """Keep the reply in the message's language: if the message reads as standard English but the model replied
+    in Pidgin, fall back to the plain-English reason instead of shipping the wrong language."""
+    reply = result.get("reply") or ""
+    if _pidgin_score(reply) >= 2 and _pidgin_score(message) == 0:
+        result["reply"] = result.get("reason") or reply
+        result["language"] = "english"
+        result["reply_language_fixed"] = True
+    return result
+
+
 def _extract_json(text: str) -> dict:
     """Pull the JSON object out of the model's reply, ignoring any reasoning text."""
     text = re.sub(r"<think>.*?</think>", "", text or "", flags=re.S)
@@ -196,6 +218,7 @@ def triage(message: str) -> dict:
             result["verdict"] = "suspicious"
         if result.get("harmful") not in ("harassment", "sexual", "threat"):
             result["harmful"] = "none"
+        language_guard(message, result)
         result["parse_ok"] = True
     except (ValueError, json.JSONDecodeError):
         result = {"verdict": "suspicious", "reason": "Model reply could not be parsed", "parse_ok": False}
