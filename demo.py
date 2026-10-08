@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 
 import uuid
 
-from events import log_check, log_feedback
+from events import log_check, log_feedback, log_visit
 from limits import CAP_MESSAGE, take_check
 
 router = APIRouter()
@@ -47,7 +47,22 @@ def _client_ip(request: Request) -> str:
     return (fwd.split(",")[0].strip() or (request.client.host if request.client else "unknown"))
 
 
-def _run(message: str, out: queue.Queue, image: tuple = None) -> None:
+VISITOR_RE = re.compile(r"^[A-Za-z0-9]{8,40}$")
+_last_visit = {}
+_visit_lock = threading.Lock()
+
+
+def _visitor(value) -> str:
+    """Anonymous random id the browser keeps for itself; anything else is ignored."""
+    value = str(value or "")
+    return value if VISITOR_RE.match(value) else ""
+
+
+def _source(value) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]", "", str(value or "").lower())[:40] or "direct"
+
+
+def _run(message: str, out: queue.Queue, image: tuple = None, visitor: str = "") -> None:
     """Runs the full pipeline in a worker thread, pushing progress events into the queue.
 
     image, if given, is (bytes, mime): the screenshot is read first, then judged like a typed message.
@@ -92,7 +107,7 @@ def _run(message: str, out: queue.Queue, image: tuple = None) -> None:
               "reason": result.get("reason"), "reply": result.get("reply"),
               "evidence": (result.get("evidence") or [])[:3], "search_count": result.get("search_count", 0),
               "dropped_citations": result.get("dropped_citations", 0), "total_latency_s": round(elapsed, 2)})
-        log_check("web", "web-demo", message, first, result, who, elapsed, check_id)
+        log_check("web", "web-demo", message, first, result, who, elapsed, check_id, user=visitor)
     except Exception as exc:  # never leave the page hanging
         print("Demo pipeline error:", exc)
         emit({"type": "error", "message": "The check could not be completed. Please try again in a moment."})
@@ -103,7 +118,11 @@ def _run(message: str, out: queue.Queue, image: tuple = None) -> None:
 @router.get("/demo", response_class=HTMLResponse)
 def demo_page():
     with open(HTML_PATH, encoding="utf-8") as f:
-        return f.read()
+        html = f.read()
+    waitlist = os.getenv("WAITLIST_URL", "").strip()
+    if waitlist:  # set in .env / Render so the link never has to be edited in the page itself
+        html = html.replace('const WAITLIST_URL = "";', f"const WAITLIST_URL = {json.dumps(waitlist)};")
+    return html
 
 
 @router.post("/demo/check")
@@ -133,7 +152,7 @@ async def demo_check(request: Request):
         raise HTTPException(status_code=429, detail=CAP_MESSAGE)
 
     out: queue.Queue = queue.Queue()
-    threading.Thread(target=_run, args=(message, out, image), daemon=True).start()
+    threading.Thread(target=_run, args=(message, out, image, _visitor(body.get("visitor"))), daemon=True).start()
 
     def stream():
         while True:
@@ -144,6 +163,27 @@ async def demo_check(request: Request):
 
     return StreamingResponse(stream(), media_type="application/x-ndjson",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@router.post("/demo/visit")
+async def demo_visit(request: Request):
+    """Counts people, not page loads: one record per browser every 30 minutes, no sign-in, no cookies."""
+    try:
+        body = await request.json()
+    except Exception:
+        return {"ok": False}
+    visitor = _visitor(body.get("visitor"))
+    if not visitor:
+        return {"ok": False}
+    now = time.time()
+    with _visit_lock:
+        if now - _last_visit.get(visitor, 0) < 1800:
+            return {"ok": True}
+        _last_visit[visitor] = now
+        if len(_last_visit) > 20000:
+            _last_visit.clear()
+    threading.Thread(target=log_visit, args=(visitor, _source(body.get("source"))), daemon=True).start()
+    return {"ok": True}
 
 
 @router.post("/demo/feedback")
@@ -162,7 +202,9 @@ PRIVACY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "privacy
 @router.get("/privacy", response_class=HTMLResponse)
 def privacy_page():
     with open(PRIVACY_PATH, encoding="utf-8") as f:
-        return f.read()
+        html = f.read()
+    email = os.getenv("PRIVACY_EMAIL", "").strip()
+    return html.replace("privacy@facetrust.ai", email) if email else html
 
 
 @router.get("/", include_in_schema=False)

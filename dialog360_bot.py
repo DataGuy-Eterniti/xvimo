@@ -19,7 +19,7 @@ from fastapi import BackgroundTasks, FastAPI, Request
 
 from dashboard import router as dashboard_router
 from demo import router as demo_router
-from events import log_check
+from events import anon_id, log_check
 
 load_dotenv(override=True)
 
@@ -123,7 +123,7 @@ def handle_text(sender: str, text: str, skip_greeting: bool = False) -> None:
             result, who = investigate(text, first), "ultra_agent"
         send_text(sender, format_reply(result, who, first))
         elapsed = time.time() - started
-        log_check("whatsapp", sender, text, first, result, who, elapsed)
+        log_check("whatsapp", sender, text, first, result, who, elapsed, user=anon_id("whatsapp", sender))
         print(f"[{sender[-4:]}] {result.get('verdict')} via {who} in {round(elapsed, 1)}s")
     except Exception as exc:
         print("Pipeline error:", exc)

@@ -328,6 +328,26 @@
 
   ["waitlist", "waitlist2"].forEach(id => { if (WAITLIST_URL) $(id).href = WAITLIST_URL; else $(id).style.display = "none"; });
 
+  /* ---------- anonymous visitor count: a random id kept in this browser only, no sign-in ---------- */
+  const VISITOR = (() => {
+    try {
+      let v = localStorage.getItem("xv_vid");
+      if (!v) {
+        v = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/[^a-z0-9]/gi, "").slice(0, 24);
+        localStorage.setItem("xv_vid", v);
+      }
+      return v;
+    } catch (_) { return ""; }
+  })();
+  const SOURCE = (() => {
+    const ref = new URLSearchParams(location.search).get("ref");
+    if (ref) return ref;
+    try { const h = document.referrer ? new URL(document.referrer).hostname : ""; return h && h !== location.hostname ? h.replace(/^www\./, "") : "direct"; }
+    catch (_) { return "direct"; }
+  })();
+  if (VISITOR) fetch("/demo/visit", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ visitor: VISITOR, source: SOURCE }) }).catch(() => {});
+
   /* ---------- hero ribbon: scam messages flowing through the scanner ---------- */
   (function ribbon() {
     const LINES = ["NVIDIA Nemotron 3 Nano — triage", "NVIDIA Nemotron 3 Ultra — investigator agent",
@@ -515,7 +535,7 @@
     resetFlow(); anim = Promise.resolve(); t0 = performance.now();
     $("trace").innerHTML = ""; $("result").innerHTML = `<h2>Result</h2><p class="placeholder">Working on it…</p>`;
     try {
-      const res = await fetch("/demo/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, image: imageData }) });
+      const res = await fetch("/demo/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, image: imageData, visitor: VISITOR }) });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || "The check could not start."); }
       const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
       for (;;) {
