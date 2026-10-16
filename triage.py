@@ -97,10 +97,12 @@ SCAM_CONFIDENT = 0.90   # minimum confidence for Nano to call a scam on its own 
 
 # Safety net: if the message touches a high-risk topic, Nano may not clear it alone.
 RISK_PATTERN = re.compile(
-    r"interview|recruit|aptitude|shortlist|vacanc|bvn|atm|block|deactivat|suspend|reactivat|invest|"
-    r"profit|return|roi|loan|grant|won|win |prize|promo|bonus|giveaway|urgent|click|http|www\.|"
-    r"verify|password|pin\b|otp|code|send .*money|fee|pay |"
-    r"maga|mugu|yahoo|419|format\b",  # Nigerian fraud slang
+    # word boundaries stop false hits like "feel" -> fee, "wont" -> won, "atmosphere" -> atm
+    r"interview|recruit|aptitude|shortlist|vacanc|\bbvn\b|\batm\b|\bblock|deactivat|suspend|reactivat|invest|"
+    r"profit|\breturns?\b|\broi\b|\bloan|\bgrants?\b|\bwon\b|\bwin\b|prize|\bpromo|bonus|giveaway|urgent|click|"
+    r"http|www\.|verif|password|\bpin\b|\botp\b|\w*code\b|send .*money|\bfees?\b|\bpay\b|\bpayment|"
+    r"(?:got|found|saw) your (?:number|contact)|offshore|serious relationship|"  # romance-scam openers
+    r"\bmaga\b|\bmugu\b|yahoo|\b419\b|\bformat\b",  # Nigerian fraud slang
     re.I,
 )
 

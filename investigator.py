@@ -76,12 +76,26 @@ How to work:
    document-sharing sites, forums or mirrors.
 
 Judging rules:
-- Scam: asks for money, fees, PINs, OTPs, BVN, card or login details under false pretences, promises unrealistic
-  returns, or impersonates a bank, agency or relative. Unsolicited job or interview invites from unknown firms are a
-  well-known Nigerian lure.
-- Legitimate: OTP codes, transaction alerts, telco notices, delivery or payment confirmations, a known person asking
-  to be paid for finished work, fraud warnings from banks, normal personal chats.
-- Placeholders like [NAME], [PHONE], [ACCOUNT] hide private details; the action around them still counts.
+- likely_scam: asks for money, fees, PINs, OTPs, BVN, card or login details under false pretences, promises
+  unrealistic returns, impersonates a bank, agency or relative, or your searches show the named company or scheme
+  reported as fraud.
+- suspicious: ONLY when the message itself has a concrete red flag you could neither confirm nor rule out: an
+  unverified link, a request for money or personal details, pressure to act fast, or a claim to be an organisation
+  you could not find. Being unsure is not a red flag on its own.
+- no_red_flags: messages that only inform or ask for nothing risky: transaction alerts, OTP or verification codes
+  sent to the user, bill or subscription reminders, application acknowledgements, interview reminders, referral
+  promos, delivery or payment confirmations, a known person asking to be paid for finished work, fraud warnings from
+  banks, normal personal chats.
+- Job and interview invites: an invite to an interview or test at a named company's physical venue is a common
+  Nigerian lure (the fee, "training" charge or MLM pitch comes at the venue, not in the message). Use likely_scam if
+  it asks for money, bank or BVN details, or your searches show the company reported. Otherwise use suspicious unless
+  your search confirms the company is real AND currently hiring for that role; tell the user to verify before going.
+  A plain acknowledgement or reminder of an application, with no unknown company or venue, is no_red_flags.
+- A stranger who "found your number" and opens with friendship or romance (often an engineer offshore, a soldier or
+  a doctor abroad) is a romance-scam opener: suspicious at least.
+- Search results about scams on the general topic (for example "WhatsApp code scams") do not make this particular
+  message a scam; judge what this message asks the user to do.
+- Placeholders like [NAME], [PHONE], [ACCOUNT], [AMOUNT], [CODE] hide private details; treat them as ordinary values.
 
 When you are done, reply with ONLY this JSON object and nothing else:
 {{
