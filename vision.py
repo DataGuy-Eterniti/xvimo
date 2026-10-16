@@ -12,6 +12,7 @@ import time
 from dotenv import load_dotenv
 from openai import APIConnectionError, BadRequestError, InternalServerError, RateLimitError
 
+from tracing import traceable
 from triage import RETRY_WAITS, client
 
 load_dotenv(override=True)
@@ -75,6 +76,7 @@ def _clean_sender(sender: str, text: str) -> str:
     return sender
 
 
+@traceable("Screenshot reader · MiniCPM-V")
 def read_screenshot(image_bytes: bytes, mime: str = "image/jpeg") -> dict:
     """Return {is_message, sender, text, links, notes, model, latency_s} for one screenshot."""
     if not image_bytes:

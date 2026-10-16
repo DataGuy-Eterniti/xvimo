@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from openai import APIConnectionError, BadRequestError, InternalServerError, RateLimitError
 from tavily import TavilyClient
 
+from tracing import traceable
 from triage import RETRY_WAITS, client, language_guard
 
 load_dotenv(override=True)
@@ -97,6 +98,7 @@ ALLOWED_VERDICTS = {"likely_scam", "suspicious", "no_red_flags"}
 
 
 # ---------------------------------------------------------------- tools
+@traceable("Tavily search", run_type="tool")
 def _run_search(query: str, regulators_only: bool) -> list:
     kwargs = dict(query=query[:300], max_results=5, search_depth="basic")
     if regulators_only:
@@ -215,6 +217,7 @@ def _loop_json_actions(messages: list, trace: dict) -> str:
 
 
 # ---------------------------------------------------------------- public entry point
+@traceable("Investigation · Nemotron Ultra agent")
 def investigate(message: str, triage_result: dict, on_event=None) -> dict:
     """Investigate an escalated message and return a final, cited verdict.
 

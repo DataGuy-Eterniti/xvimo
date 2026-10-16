@@ -8,9 +8,11 @@ from dotenv import load_dotenv
 from openai import (APIConnectionError, BadRequestError, InternalServerError, OpenAI,
                     RateLimitError)
 
+from tracing import traceable, wrap
+
 load_dotenv(override=True)
 
-client = OpenAI(base_url=os.getenv("LLM_BASE_URL"), api_key=os.getenv("LLM_API_KEY"))
+client = wrap(OpenAI(base_url=os.getenv("LLM_BASE_URL"), api_key=os.getenv("LLM_API_KEY")))
 NANO_MODEL = os.getenv("NANO_MODEL")
 
 SYSTEM_PROMPT = """You are Xvimo, a fraud analyst protecting ordinary people in Nigeria and across Africa.
@@ -197,18 +199,22 @@ def _create(params: dict):
             time.sleep(wait)
 
 
-def _call_model(message: str):
+def _call_model(message: str, model: str = None):
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"Message to check:\n\"\"\"\n{message}\n\"\"\""},
     ]
-    return _create(dict(model=NANO_MODEL, messages=messages, temperature=0.0, max_tokens=1500))
+    return _create(dict(model=model or NANO_MODEL, messages=messages, temperature=0.0, max_tokens=1500))
 
 
-def triage(message: str) -> dict:
-    """Run Nano triage on one message. Returns the analysis plus timing and token usage."""
+@traceable("Triage · Nemotron Nano")
+def triage(message: str, model: str = None) -> dict:
+    """Run Nano triage on one message. Returns the analysis plus timing and token usage.
+
+    model lets the benchmark run the same triage prompt on other open models.
+    """
     started = time.time()
-    response = _call_model(message)
+    response = _call_model(message, model)
     latency = round(time.time() - started, 2)
 
     raw = response.choices[0].message.content or ""
@@ -228,7 +234,7 @@ def triage(message: str) -> dict:
     result["latency_s"] = latency
     result["input_tokens"] = getattr(usage, "prompt_tokens", None)
     result["output_tokens"] = getattr(usage, "completion_tokens", None)
-    result["model"] = NANO_MODEL
+    result["model"] = model or NANO_MODEL
     return result
 
 

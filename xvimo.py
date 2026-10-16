@@ -8,11 +8,13 @@ import sys
 import time
 
 from investigator import investigate
+from tracing import traceable
 from triage import triage
 
 VERDICT_LABEL = {"likely_scam": "LIKELY SCAM", "suspicious": "SUSPICIOUS", "no_red_flags": "NO RED FLAGS FOUND"}
 
 
+@traceable("Xvimo check")
 def check(message: str) -> dict:
     """Run the full Xvimo pipeline on one message and return the final result."""
     started = time.time()
