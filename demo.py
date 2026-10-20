@@ -209,6 +209,33 @@ def brand_file(name: str):
     return FileResponse(path, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
 
+ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "favicon")
+ICON_TYPES = {"favicon.ico": "image/x-icon", "favicon.svg": "image/svg+xml", "apple-touch-icon.png": "image/png",
+              "icon-192.png": "image/png", "icon-512.png": "image/png"}
+MANIFEST = {"name": "Xvimo: scam check before you pay", "short_name": "Xvimo", "start_url": "/demo",
+            "display": "standalone", "background_color": "#060B14", "theme_color": "#060B14",
+            "icons": [{"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+                      {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}]}
+
+
+@router.get("/site.webmanifest", include_in_schema=False)
+def web_manifest():
+    from fastapi.responses import JSONResponse
+    return JSONResponse(MANIFEST, media_type="application/manifest+json")
+
+
+def _icon(name: str):
+    path = os.path.join(ICON_DIR, name)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(path, media_type=ICON_TYPES[name], headers={"Cache-Control": "public, max-age=604800"})
+
+
+# Favicon and app icons (assets/favicon/), so browsers and phones show the Xvimo mark.
+for _name in ICON_TYPES:
+    router.add_api_route(f"/{_name}", (lambda n=_name: _icon(n)), methods=["GET"], include_in_schema=False)
+
+
 @router.get("/privacy", response_class=HTMLResponse)
 def privacy_page():
     with open(PRIVACY_PATH, encoding="utf-8") as f:
