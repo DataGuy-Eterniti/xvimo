@@ -402,6 +402,35 @@ D360_API_KEY=your_360dialog_sandbox_key
 ADMIN_TOKEN=a_long_random_password
 ```
 
+## Benchmark: how well does Xvimo work?
+
+We tested Xvimo on **330 labelled Nigerian messages** (169 scam, 161 legit) in English, Pidgin, Yoruba, Hausa and Igbo. We also ran the same prompt through several open models on Nebius Token Factory as a leaderboard.
+
+| System | Accuracy | Scams caught | False alarms | Avg time | Cost / 1,000 msgs |
+|---|---|---|---|---|---|
+| Gemma 3 27B (single pass) | 96.4% | 99.4% | 6.8% | 4.7 s | – |
+| Nemotron 3 Ultra (single pass) | 96.4% | 98.8% | 6.2% | 1.7 s | $2.27 |
+| Nemotron 3 Nano (single pass) | 93.6% | 95.9% | 8.7% | 1.2 s | $0.14 |
+| **Xvimo pipeline** (Nano triage → Ultra agent + web search) | 93.6% | 97.6% | 10.6% | 7.1 s | $3.90 |
+| Nemotron 3 Super (single pass) | 78.8% | 99.4% | 42.9% | 2.4 s | – |
+
+Nano answers about 55% of messages alone in about 1 second. The rest go to the Ultra agent, which searches the web and Nigerian regulator sites and returns cited evidence.
+
+**What we learned (honestly):**
+- On raw accuracy, the full agent pipeline does **not** beat a single Ultra call. The agent adds **evidence**: the sources it checked, regulator lookups and a plain-language safety tip. That costs time and money, and the agent is over-cautious on routine messages such as bank alerts and subscription reminders.
+- We revised the agent's rules after this run. The revision raised scams caught to 99.4% (168 of 169), mainly by flagging fake job interview invites. That run was cut short when our web search credits ran out, so we don't report it as a final score.
+- Local languages are thin: 32 Pidgin messages but only 4 each in Yoruba, Hausa and Igbo. Those 100% scores prove very little until we have more native-speaker data.
+- Some constructed messages use placeholders like `[ACCOUNT]`, which can make real bank alerts look odd to models.
+
+Every run is traced in LangSmith (phone numbers and emails masked before upload): [example trace](https://smith.langchain.com/public/78f72c13-81a7-40b4-952c-67846cf7763f/r/01a1451c-26e7-75c2-bda5-0095fbc0b77f?start_time=2026-10-16T14%3A27%3A15.30372Z).
+The 180 messages we are allowed to share are published as **[NaijaScamBench](Ehttps://huggingface.co/datasets/Eterniti/NaijaScamBench)** on Hugging Face.
+
+Reproduce:
+```bash
+python bench.py              # all models + full pipeline (needs NEBIUS_API_KEY and TAVILY_API_KEY)
+python bench.py --limit 20   # quick smoke test
+```
+
 ## Project structure (updated)
 
 ```
