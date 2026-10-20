@@ -42,14 +42,13 @@ mcp = MCPServer(
 def _shape(r: dict) -> dict:
     """The fields an agent needs, in a stable shape for both modes."""
     verdict = r.get("verdict")
-    return {
+    out = {
         "verdict": verdict,
         "label": LABELS.get(verdict, verdict),
         "confidence": r.get("confidence"),
         "scam_type": r.get("scam_type"),
         "reason": r.get("reason"),
         "reply_for_user": r.get("reply"),
-        "safety_tips": r.get("safety") or [],
         "evidence": [{"finding": e.get("finding"), "url": e.get("url")} for e in (r.get("evidence") or [])[:3]],
         "decided_by": "Nemotron Nano (fast triage)" if r.get("decided_by") == "nano"
                       else ("Nemotron Ultra agent with web search" if r.get("evidence")
@@ -59,6 +58,9 @@ def _shape(r: dict) -> dict:
         "seconds": r.get("total_latency_s"),
         "note": "Automated check, not a guarantee. When in doubt, don't send money and confirm through official channels.",
     }
+    if r.get("safety"):  # only for abusive, sexual or threatening messages
+        out["harassment_safety_tips"] = r["safety"]
+    return out
 
 
 def _check_hosted(message: str) -> dict:
