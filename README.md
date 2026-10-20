@@ -423,7 +423,7 @@ Nano answers about 55% of messages alone in about 1 second. The rest go to the U
 - Some constructed messages use placeholders like `[ACCOUNT]`, which can make real bank alerts look odd to models.
 
 Every run is traced in LangSmith (phone numbers and emails masked before upload): [example trace](https://smith.langchain.com/public/78f72c13-81a7-40b4-952c-67846cf7763f/r/01a1451c-26e7-75c2-bda5-0095fbc0b77f?start_time=2026-10-16T14%3A27%3A15.30372Z).
-The 180 messages we are allowed to share are published as **[NaijaScamBench](Ehttps://huggingface.co/datasets/Eterniti/NaijaScamBench)** on Hugging Face.
+The 180 messages we are allowed to share are published as **[NaijaScamBench](https://huggingface.co/datasets/Eterniti/NaijaScamBench)** on Hugging Face.
 
 Reproduce:
 ```bash
