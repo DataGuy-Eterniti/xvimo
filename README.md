@@ -425,6 +425,7 @@ Nano answers about 55% of messages alone in about 1 second. The rest go to the U
 Every run is traced in LangSmith (phone numbers and emails masked before upload): [example trace](https://smith.langchain.com/public/78f72c13-81a7-40b4-952c-67846cf7763f/r/01a1451c-26e7-75c2-bda5-0095fbc0b77f?start_time=2026-10-16T14%3A27%3A15.30372Z).
 The 180 messages we are allowed to share are published as **[NaijaScamBench](https://huggingface.co/datasets/Eterniti/NaijaScamBench)** on Hugging Face.
 
+
 ### Every check is traced (LangSmith)
 Each step is recorded: Nano triage, the routing decision, every Ultra agent turn and every web search. Phone numbers and emails are masked before upload. [Open the live trace](https://smith.langchain.com/public/648e826e-d57f-4f22-a0b6-a32b3e07b5c4/r/01a1451e-c3c6-77c2-a2b9-8cd36c6f0638?start_time=2026-10-16T14%3A30%3A06.534759Z) (kept for 14 days; screenshots below).
 
@@ -434,12 +435,6 @@ Each step is recorded: Nano triage, the routing decision, every Ultra agent turn
 | **Agent verdict with evidence** | **Benchmark run: 3,111 model calls, 0% errors** |
 | ![Agent verdict](docs/langsmith/03-agent-verdict.png) | ![Project stats](docs/langsmith/04-project-stats.png) |
 
-
-Reproduce:
-```bash
-python bench.py              # all models + full pipeline (needs NEBIUS_API_KEY and TAVILY_API_KEY)
-python bench.py --limit 20   # quick smoke test
-```
 ### Use Xvimo from any AI agent (MCP)
 Xvimo ships an MCP server, so Claude Desktop, Cursor, VS Code or any MCP client can check messages for scams.
 
@@ -449,10 +444,10 @@ Add to your MCP config:
 
     {"mcpServers": {"xvimo": {"command": "python", "args": ["path/to/xvimo/mcp_server.py"]}}}
 
-No keys needed: it uses the hosted Xvimo beta (fair-use limits apply). Set `XVIMO_LOCAL=1` plus your own
-`NEBIUS_API_KEY` and `TAVILY_API_KEY` to run the full Nemotron pipeline locally.
+No keys needed: it uses the hosted Xvimo beta (fair-use limits apply). Set `XVIMO_LOCAL=1` plus your own `NEBIUS_API_KEY` and `TAVILY_API_KEY` to run the full Nemotron pipeline locally.
 
-![Xvimo in Claude Desktop](docs/mcp-claude-desktop.png)
+![Xvimo called through MCP Inspector](docs/mcp-inspector.png)
+
 
 ## Project structure (updated)
 
@@ -483,24 +478,5 @@ xvimo/
 - [ ] Deploy on Nebius Serverless once Token Factory access is granted
 - [ ] Full 300-message benchmark; publish results here
 - [ ] Demo video and Devpost submission (deadline 30 Oct 2026)
-### Every check is traced (LangSmith)
-Each step is recorded: Nano triage, the routing decision, every Ultra agent turn and every web search. Phone numbers and emails are masked before upload. [Open the live trace](https://smith.langchain.com/public/648e826e-d57f-4f22-a0b6-a32b3e07b5c4/r/01a1451e-c3c6-77c2-a2b9-8cd36c6f0638?start_time=2026-10-16T14%3A30%3A06.534759Z) (kept for 14 days; screenshots below).
 
-| Step tree | Web search the agent ran |
-|---|---|
-| ![Trace overview](docs/langsmith/01-trace-overview.png) | ![Tavily search](docs/langsmith/02-tavily-search.png) |
-| **Agent verdict with evidence** | **Benchmark run: 3,111 model calls, 0% errors** |
-| ![Agent verdict](docs/langsmith/03-agent-verdict.png) | ![Project stats](docs/langsmith/04-project-stats.png) |
 
-### Use Xvimo from any AI agent (MCP)
-Xvimo ships an MCP server, so Claude Desktop, Cursor, VS Code or any MCP client can check messages for scams.
-
-    pip install "mcp>=2.0" httpx
-
-Add to your MCP config:
-
-    {"mcpServers": {"xvimo": {"command": "python", "args": ["path/to/xvimo/mcp_server.py"]}}}
-
-No keys needed: it uses the hosted Xvimo beta (fair-use limits apply). Set `XVIMO_LOCAL=1` plus your own `NEBIUS_API_KEY` and `TAVILY_API_KEY` to run the full Nemotron pipeline locally.
-
-![Xvimo called through MCP Inspector](docs/mcp-inspector.png)
