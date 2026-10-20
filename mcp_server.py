@@ -52,7 +52,9 @@ def _shape(r: dict) -> dict:
         "safety_tips": r.get("safety") or [],
         "evidence": [{"finding": e.get("finding"), "url": e.get("url")} for e in (r.get("evidence") or [])[:3]],
         "decided_by": "Nemotron Nano (fast triage)" if r.get("decided_by") == "nano"
-                      else "Nemotron Ultra agent with web search",
+                      else ("Nemotron Ultra agent with web search" if (r.get("search_count") or r.get("searches"))
+                            else "Nemotron Ultra agent"),
+        "web_searches": r.get("search_count") or len(r.get("searches") or []),
         "seconds": r.get("total_latency_s"),
         "note": "Automated check, not a guarantee. When in doubt, don't send money and confirm through official channels.",
     }
