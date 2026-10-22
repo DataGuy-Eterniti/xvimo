@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="assets/xvimo_logo_animated.gif" alt="Xvimo: scam check before you pay" width="760">
 </p>
 
@@ -11,7 +11,8 @@
   <a href="https://xvimo.onrender.com"><b>▶ Try the live beta</b></a> ·
   <a href="#benchmark-how-well-does-xvimo-work">Benchmark</a> ·
   <a href="#use-xvimo-from-any-ai-agent-mcp">MCP server</a> ·
-  <a href="#every-check-is-traced-langsmith">Traces</a>
+  <a href="#every-check-is-traced-langsmith">Traces</a> ·
+  <a href="https://huggingface.co/datasets/Eterniti/NaijaScamBench">Dataset</a>
 </p>
 
 <p align="center">
@@ -114,7 +115,7 @@ We tested Xvimo on **330 labelled Nigerian messages** (169 scam, 161 legit) in E
 | Real Nigerian scam SMS (Data Science Nigeria, via a public research repository) | 120 | – | ❌ no redistribution licence |
 | Everyday Nigerian messages | – | 30 | ❌ |
 
-The **180 shareable messages** are published on Hugging Face as **NaijaScamBench**, with a dataset card that lists its limitations. All personal details are replaced with placeholders (`[NAME]`, `[PHONE]`, `[ACCOUNT]`, `[AMOUNT]`, `[CODE]`).
+The **180 shareable messages** are published on Hugging Face as **[NaijaScamBench](https://huggingface.co/datasets/Eterniti/NaijaScamBench)**, with a dataset card that lists its limitations. All personal details are replaced with placeholders (`[NAME]`, `[PHONE]`, `[ACCOUNT]`, `[AMOUNT]`, `[CODE]`).
 
 Reproduce the leaderboard:
 ```bash
@@ -278,6 +279,7 @@ xvimo/
 - [x] Admin dashboard with anonymous usage stats
 - [x] 330-message benchmark + open-model leaderboard
 - [x] LangSmith tracing, MCP server
+- [x] NaijaScamBench published on Hugging Face (180 messages)
 - [ ] Final benchmark on the revised agent, including new unseen messages
 - [ ] Native-speaker review and more Yoruba, Hausa and Igbo messages
 - [ ] Demo video and Devpost submission
