@@ -105,6 +105,39 @@
   @media (max-width: 1080px) { .grid { grid-template-columns: 1fr; } }
   @media (max-width: 640px) { .wrap { padding: 16px; } .below { grid-template-columns: 1fr; } .powered { display: none; } }
 
+  /* ---------- phone layout for the live demo ---------- */
+  .mSteps, .mob { display: none; }
+  @media (max-width: 640px) {
+    .dsk { display: none; } .mob { display: inline; }
+    .grid { gap: 22px; margin-top: 16px; }
+    .demoTitle { font-size: 30px; } .lede { font-size: 15px; margin-bottom: 14px; }
+    textarea { min-height: 120px; font-size: 16px; }            /* 16px stops iOS zooming into the box */
+    .attach { margin-top: 12px; } .attachHint { font-size: 12px; }
+    .chips { gap: 8px; margin: 12px 0 18px; } .chip { padding: 8px 13px; font-size: 13.5px; }
+    .go { padding: 16px 20px; font-size: 16.5px; }
+    .note { font-size: 12px; line-height: 1.5; }
+    .stage { display: none; }
+    .mSteps { display: grid; scroll-margin-top: 14px; grid-template-columns: repeat(4, 1fr); position: relative; background: var(--panel);
+      border: 1px solid var(--line); border-radius: 18px; padding: 16px 8px 14px; }
+    .mSteps::before { content: ""; position: absolute; left: 12.5%; right: 12.5%; top: 30px; height: 2px; background: var(--line); }
+    .mStep { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center; }
+    .mStep i { width: 30px; height: 30px; border-radius: 50%; background: var(--panel-2); border: 2px solid var(--line);
+      display: grid; place-items: center; font-style: normal; font-size: 12px; color: var(--muted); font-weight: 600; z-index: 1;
+      transition: background .3s, border-color .3s, color .3s; }
+    .mStep b { font-size: 12.5px; font-weight: 600; color: var(--muted); } .mStep span { font-size: 11px; color: var(--muted); min-height: 15px; }
+    .mStep.busy i { border-color: var(--cyan); animation: mPulse 1s ease-in-out infinite; }
+    .mStep.on i { background: #13263A; border-color: var(--cyan); color: var(--text); } .mStep.on b { color: var(--text); }
+    .mStep.on.risk i { border-color: var(--risk); background: #2A1424; } .mStep.on.warn i { border-color: var(--amber); background: #2A2310; }
+    .mStep.on.safe i { border-color: var(--green); background: #0F2A22; }
+    @keyframes mPulse { 50% { box-shadow: 0 0 0 6px rgba(64,201,218,.18); } }
+    .below { gap: 14px; margin-top: 14px; } .panel { min-height: 0; padding: 15px 16px; }
+    #result { order: -1; scroll-margin-top: 14px; }              /* the answer first, the working underneath */
+    .verdict { font-size: 22px; } .reply { font-size: 15.5px; line-height: 1.55; }
+    .trace { gap: 12px; font-size: 14px; } .trace li { grid-template-columns: 40px 1fr; }
+    .ev a { padding: 10px 12px; } .fb button { padding: 8px 14px; }
+    footer { line-height: 1.6; }
+  }
+
   /* ================= hero (landing) ================= */
   .announce { display: block; text-align: center; text-decoration: none; color: var(--ink); font-size: 13.5px; font-weight: 500;
     padding: 9px 16px; background: linear-gradient(90deg, var(--cyan), var(--green)); }
@@ -413,7 +446,7 @@
   <div class="grid">
     <section>
       <h2 class="demoTitle">Paste a suspicious message. <span class="x">Watch the agent check it.</span></h2>
-      <p class="lede">This is the same AI that answers on WhatsApp. Every step on the right is happening for real.</p>
+      <p class="lede">This is the same AI that answers on WhatsApp. Every step <span class="dsk">on the right</span><span class="mob">below</span> is happening for real.</p>
       <label for="msg" class="sr" style="position:absolute;left:-9999px">Message to check</label>
       <div class="drop" id="drop">
         <textarea id="msg" maxlength="1500" placeholder="Paste the message — or drop / paste a screenshot here"></textarea>
@@ -433,6 +466,12 @@
     </section>
 
     <section aria-live="polite">
+      <div class="mSteps" id="mSteps" aria-hidden="true">
+        <div class="mStep" data-s="0"><i>1</i><b>Message</b><span id="mS0"></span></div>
+        <div class="mStep" data-s="1"><i>2</i><b>Nano</b><span id="mS1"></span></div>
+        <div class="mStep" data-s="2"><i>3</i><b>Agent</b><span id="mS2"></span></div>
+        <div class="mStep" data-s="3"><i>4</i><b>Verdict</b><span id="mS3"></span></div>
+      </div>
       <div class="stage">
         <svg class="flow" viewBox="0 0 1000 330" role="img" aria-label="Live view of the Xvimo pipeline">
           <defs><linearGradient id="edgeGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1000" y2="0">
@@ -645,8 +684,15 @@
   /* ---------- flow animation, driven by real events ---------- */
   let anim = Promise.resolve();
   const queueAnim = fn => (anim = anim.then(fn).catch(() => {}));
-  function node(id, ...cls) { const n = $("n-" + id); n.classList.remove("busy"); n.classList.add("on", ...cls); }
-  function busy(id) { $("n-" + id).classList.add("busy"); }
+  const MSTEP = { msg: 0, nano: 1, ultra: 2, reg: 2, web: 2, safe: 2, out: 3 };
+  function mStep(id, state, cls = []) {
+    const el = document.querySelector(`.mStep[data-s="${MSTEP[id]}"]`); if (!el) return;
+    if (state === "busy") el.classList.add("busy"); else { el.classList.remove("busy"); el.classList.add("on", ...cls); }
+    if (id === "safe") $("mS2").textContent = "skipped";
+  }
+  function node(id, ...cls) { const n = $("n-" + id); n.classList.remove("busy"); n.classList.add("on", ...cls); mStep(id, "on", cls); }
+  function busy(id) { $("n-" + id).classList.add("busy"); mStep(id, "busy"); }
+  const phone = () => matchMedia("(max-width: 640px)").matches;
   function travel(edgeId, ms = 550, outAndBack = false) {
     const edge = $(edgeId); edge.classList.add("lit");
     if (reduce) return Promise.resolve();
@@ -665,6 +711,8 @@
   function resetFlow() {
     document.querySelectorAll(".node").forEach(n => n.classList.remove("on", "busy", "risk", "warn", "safe"));
     document.querySelectorAll(".edge").forEach(e => e.classList.remove("lit"));
+    document.querySelectorAll(".mStep").forEach(n => n.classList.remove("on", "busy", "risk", "warn", "safe"));
+    ["mS0", "mS1", "mS2", "mS3"].forEach(i => $(i).textContent = "");
     $("outLabel").textContent = "Waiting"; $("nanoLabel").textContent = "Read and route"; $("msgLabel").textContent = "Received"; $("ultraLabel").textContent = "Investigate";
   }
 
@@ -692,7 +740,7 @@
       step(`Triage: <b>${esc(SHORT[ev.verdict] || ev.verdict)}</b>, confidence ${Number(ev.confidence || 0).toFixed(2)}, ${esc(ev.language || "")}.${flags}`);
       step(`Routing: ${esc(ev.route_reason)}`);
       queueAnim(async () => {
-        node("nano"); $("nanoLabel").textContent = `${ev.latency_s ?? "–"} s`;
+        node("nano"); $("nanoLabel").textContent = `${ev.latency_s ?? "–"} s`; $("mS1").textContent = `${ev.latency_s ?? "–"} s`;
         if (ev.route === "final") { await travel("e-nano-safe"); node("safe"); }
         else { await travel("e-nano-ultra"); busy("ultra"); }
       });
@@ -708,12 +756,14 @@
       });
     } else if (ev.type === "result") {
       queueAnim(async () => {
-        if (ev.decided_by === "ultra_agent") { node("ultra"); $("ultraLabel").textContent = `${ev.search_count} searches`; await travel("e-ultra-out"); }
+        if (ev.decided_by === "ultra_agent") { node("ultra"); $("ultraLabel").textContent = `${ev.search_count} searches`; $("mS2").textContent = `${ev.search_count} searches`; await travel("e-ultra-out"); }
         else await travel("e-safe-out");
         const harmful = !!HARM[ev.harmful];
         node("out", harmful && ev.verdict === "no_red_flags" ? "warn" : (TONE[ev.verdict] || "warn"));
         $("outLabel").textContent = harmful && ev.verdict === "no_red_flags" ? "Harmful" : (SHORT[ev.verdict] || "Checked");
+        $("mS3").textContent = SHORT[ev.verdict] || "";
         showResult(ev);
+        if (phone()) $("result").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
       });
       step(`Done in <b>${ev.total_latency_s} s</b>.`);
     } else if (ev.type === "error") {
@@ -758,6 +808,7 @@
     $("go").disabled = true; $("go").textContent = "Checking…";
     resetFlow(); anim = Promise.resolve(); t0 = performance.now();
     $("trace").innerHTML = ""; $("result").innerHTML = `<h2>Result</h2><p class="placeholder">Working on it…</p>`;
+    if (phone()) $("mSteps").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
     try {
       const res = await fetch("/demo/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, image: imageData, visitor: VISITOR }) });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || "The check could not start."); }
