@@ -21,7 +21,7 @@
     --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; overflow-x: hidden; }
+  html, body { margin: 0; overflow-x: clip; }
   body { font-family: var(--font); color: var(--text); font-size: 15px; line-height: 1.5; min-height: 100vh; background:
       radial-gradient(900px 500px at 70% -10%, rgba(64,201,218,0.084), transparent 62%),
       linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px) 0 0 / 44px 44px,
@@ -196,6 +196,117 @@
   .readText { display: block; margin-top: 4px; padding: 6px 8px; border-left: 2px solid var(--cyan); background: rgba(64,201,218,0.035);
     color: #C9D2DF; font-size: 12.5px; white-space: pre-wrap; max-height: 110px; overflow: auto; }
 
+
+  /* ================= scroll-driven story hero ================= */
+  .story { position: relative; height: 520vh; }
+  .storyStage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; background: #0A101C; }
+  #heroCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .shade { position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg, rgba(13,20,36,.78) 0%, rgba(13,20,36,.38) 36%, rgba(13,20,36,0) 62%),
+                linear-gradient(0deg, rgba(13,20,36,.85) 0%, rgba(13,20,36,0) 40%),
+                linear-gradient(180deg, rgba(13,20,36,.5) 0%, rgba(13,20,36,0) 18%); }
+  .storyStage .topnav { position: absolute; z-index: 5; top: 18px; left: 50%; transform: translateX(-50%);
+    width: min(1320px, calc(100% - 64px)); }
+  .chapters { position: absolute; z-index: 3; left: max(32px, calc((100vw - 1320px) / 2 + 32px)); bottom: 9vh; width: min(640px, calc(100% - 64px)); }
+  .ch { position: absolute; left: 0; bottom: 0; width: 100%; opacity: 0; transform: translateY(18px); pointer-events: none;
+    transition: opacity .55s ease, transform .55s ease; }
+  .ch.on { opacity: 1; transform: none; pointer-events: auto; }
+  .ch .display { text-align: left; margin: 16px 0 14px; font-size: clamp(50px, 7.4vw, 112px); }
+  .ch .heroSub { margin: 0 0 22px; max-width: 540px; text-align: left; }
+  .ch .ctaRow { justify-content: flex-start; } .ch .avail { text-align: left; }
+  .chLabel { font-size: 12.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--cyan); }
+  .chLabel b { color: var(--text); font-weight: 600; margin-right: 8px; }
+  .ch h2 { margin: 10px 0 12px; font-size: clamp(34px, 4.6vw, 64px); line-height: 1.02; letter-spacing: -.02em; font-weight: 700; }
+  .ch p { margin: 0; color: #C9D2DF; font-size: 17px; max-width: 520px; }
+
+  .cards { position: absolute; z-index: 3; right: max(32px, calc((100vw - 1320px) / 2 + 32px)); top: 50%;
+    transform: translateY(-46%); width: 360px; height: 300px; }
+  .card { position: absolute; inset: auto 0 auto 0; top: 0; background: rgba(20,29,49,.9); border: 1px solid var(--line);
+    border-radius: 18px; padding: 16px 18px; box-shadow: 0 24px 60px rgba(0,0,0,.4); backdrop-filter: blur(10px);
+    opacity: 0; transform: translateY(22px) scale(.98); transition: opacity .5s ease, transform .5s ease; }
+  .card.on { opacity: 1; transform: none; }
+  .card .k { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
+  .bubble { margin-top: 10px; background: #1F2C2A; border-radius: 4px 14px 14px 14px; padding: 12px 14px; color: #E7ECEA; font-size: 15px; line-height: 1.45; }
+  .bubble small { display: block; text-align: right; color: #8FA39C; font-size: 11px; margin-top: 6px; }
+  .flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .flags span { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: rgba(238,122,140,.14); color: #F3B3BD; border: 1px solid rgba(238,122,140,.3); }
+  .route { margin-top: 12px; font-size: 13.5px; color: #C9D2DF; }
+  .route b { color: var(--amber); font-weight: 600; }
+  .srch { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+  .srch li { display: flex; gap: 10px; align-items: center; font-size: 14px; background: var(--panel-2); border-radius: 12px; padding: 9px 12px; }
+  .srch li i { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); flex: none; }
+  .card.on .srch li i { animation: ping 1.4s ease-in-out infinite; } .card.on .srch li:nth-child(2) i { animation-delay: .5s; }
+  @keyframes ping { 50% { opacity: .25; transform: scale(.7); } }
+  .cardNote { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+  .verdictBig { margin: 10px 0 8px; font-size: 26px; font-weight: 700; color: var(--risk); }
+  .card .reply { margin: 0 0 12px; color: #D9DFE9; font-size: 14.5px; line-height: 1.5; }
+  .illus { font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+
+  .chIndex { position: absolute; z-index: 3; right: max(32px, calc((100vw - 1320px) / 2 + 32px)); bottom: 9vh; list-style: none;
+    margin: 0; padding: 0; display: grid; gap: 8px; text-align: right; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+  .chIndex li { color: #6F7E96; transition: color .3s; } .chIndex li.on { color: var(--text); }
+  .chIndex li::after { content: ""; display: inline-block; width: 18px; height: 1px; background: currentColor; margin-left: 10px; vertical-align: middle; transition: width .3s; }
+  .chIndex li.on::after { width: 34px; background: var(--cyan); }
+  .scrollHint { position: absolute; z-index: 3; left: 50%; bottom: 22px; transform: translateX(-50%); font-size: 11.5px; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--muted); transition: opacity .4s; }
+  .scrollHint.gone { opacity: 0; }
+  .progress { position: absolute; z-index: 4; left: 0; bottom: 0; height: 2px; width: 100%; transform-origin: left; transform: scaleX(0);
+    background: linear-gradient(90deg, var(--cyan), var(--green)); }
+
+  .heroBelow { min-height: 0; display: block; padding-top: 34px; }
+  .endFade { position: absolute; inset: 0; z-index: 6; pointer-events: none; opacity: 0;
+    background: linear-gradient(180deg, rgba(13,20,36,0) 0%, rgba(13,20,36,.85) 55%, #0D1424 100%); }
+  .statRow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .statRow .float { position: static; animation: none; }
+  @media (max-width: 1080px) { .statRow { grid-template-columns: repeat(2, 1fr); } .chIndex { display: none; } .heroBelow .float { display: block; } }
+  @media (max-width: 760px) {
+    .story { height: 480vh; }
+    .storyStage .topnav { width: calc(100% - 28px); top: 12px; }
+    .chapters { left: 18px; width: calc(100% - 36px); bottom: 7vh; }
+    .ch .display { font-size: clamp(44px, 13vw, 64px); }
+    .ch h2 { font-size: clamp(30px, 9vw, 42px); } .ch p, .ch .heroSub { font-size: 15.5px; }
+    .cards { left: 18px; right: 18px; width: auto; top: 84px; transform: none; height: 230px; }
+    .card { padding: 13px 15px; } .bubble { font-size: 14px; } .verdictBig { font-size: 22px; margin: 6px 0; }
+    .card .reply { font-size: 13.5px; margin-bottom: 8px; }
+    .shade { background: linear-gradient(0deg, rgba(13,20,36,.94) 0%, rgba(13,20,36,.55) 40%, rgba(13,20,36,.1) 66%),
+                         linear-gradient(180deg, rgba(13,20,36,.75) 0%, rgba(13,20,36,0) 30%); }
+  }
+
+
+  /* ================= orbit pipeline ================= */
+  .orbitSec { margin-top: 64px; }
+  .orbitHead { text-align: center; margin-bottom: 8px; }
+  .orbitHead h2 { margin: 10px 0 0; font-size: clamp(26px, 3.2vw, 40px); letter-spacing: -.02em; }
+  .orbit { position: relative; width: min(1000px, 100%); margin: 0 auto; aspect-ratio: 1000 / 560; }
+  .orbitSvg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .ring { fill: none; stroke: #27344F; stroke-width: 1.5; }
+  .ringOuter { stroke-dasharray: 2 9; stroke: #2A3857; }
+  .ringText { font: 500 13px var(--font); letter-spacing: .14em; fill: #6F7E96; text-transform: uppercase; }
+  .trail { fill: none; stroke: url(#orbG); stroke-width: 3; stroke-linecap: round; opacity: .9; }
+  .comet { fill: #EAFBFF; } .comet.glow { fill: var(--cyan); opacity: .55; }
+  .core { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 300px; text-align: center; }
+  .core > img { display: block; margin: 0 auto 10px; border-radius: 14px; box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 12px 40px rgba(64,201,218,.18); }
+  .coreStep { font-size: 24px; font-weight: 700; letter-spacing: -.01em; transition: opacity .3s; }
+  .coreSub { color: var(--muted); font-size: 14px; margin-top: 4px; min-height: 21px; transition: opacity .3s; }
+  .core.swap .coreStep, .core.swap .coreSub { opacity: 0; }
+  .corePill { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 4px; background: rgba(20,29,49,.7); }
+  .corePill img { width: 48px; height: 24px; border-radius: 999px; }
+  .onode { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px;
+    width: 150px; text-align: center; transition: transform .35s ease; }
+  .onode img { width: 104px; height: 52px; border-radius: 13px; display: block; box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+    transition: box-shadow .35s ease, transform .35s ease; background: #141D31; }
+  .onode b { font-size: 14px; font-weight: 600; margin-top: 4px; }
+  .onode span { font-size: 12px; color: var(--muted); }
+  .onode.hit img { transform: scale(1.08); box-shadow: 0 0 0 2px var(--cyan), 0 0 34px rgba(64,201,218,.45); }
+  .onode.done img { box-shadow: 0 0 0 1px rgba(91,216,150,.55); }
+  @media (max-width: 760px) {
+    .orbit { aspect-ratio: 1000 / 820; }
+    .core { width: 190px; } .core > img { width: 40px; height: 40px; } .coreStep { font-size: 17px; } .coreSub { font-size: 12px; }
+    .corePill { display: none; } .ringText { display: none; }
+    .onode { width: 104px; } .onode img { width: 72px; height: 36px; border-radius: 10px; } .onode b { font-size: 12px; } .onode span { display: none; }
+  }
+
   /* logo wordmark keeps its original brand colours */
   .wordmark .x, #title .x { background: linear-gradient(90deg, #00E5FF, #39FF88); -webkit-background-clip: text; background-clip: text; color: transparent; }
 </style>
@@ -203,53 +314,94 @@
 <body>
 <a class="announce" href="#demo">Xvimo now runs on NVIDIA Nemotron via Nebius Token Factory<b>Watch it work live ↓</b></a>
 
-<header class="hero">
-  <div class="topnav">
-    <span class="wordmark"><span class="x">X</span>VIMO</span>
-    <nav class="links" aria-label="Sections"><a href="#how">How it works</a><a href="#demo">Live demo</a><a href="#demo">Results</a></nav>
-    <a class="btn ghost" id="waitlist" href="#">Join the waitlist</a>
-  </div>
-
-  <div class="heroMain">
-    <div>
-      <span class="tag"><i></i>Agentic scam checker · Built for Africa</span>
-      <h1 class="display"><span class="serif">Don't guess,</span><br><span class="x">just check.</span></h1>
-      <p class="heroSub">Forward a suspicious message. An AI agent investigates it and replies with a verdict and real evidence — in English, Pidgin, Yoruba, Hausa or Igbo.</p>
-      <div class="ctaRow"><a class="btn primary big" href="#demo">Try the live demo</a><a class="btn ghost big" id="waitlist2" href="#">Join the waitlist</a></div>
-      <div class="avail">Works on WhatsApp · Try it in your browser below</div>
+<section class="story" id="story" aria-label="How Xvimo checks a message">
+  <div class="storyStage">
+    <canvas id="heroCanvas" aria-hidden="true"></canvas>
+    <div class="shade"></div>
+    <div class="topnav">
+      <span class="wordmark"><span class="x">X</span>VIMO</span>
+      <nav class="links" aria-label="Sections"><a href="#story">How it works</a><a href="#demo">Live demo</a><a href="#results">Results</a></nav>
+      <a class="btn ghost" id="waitlist" href="#">Join the waitlist</a>
     </div>
+
+    <div class="chapters">
+      <article class="ch on" data-ch="0">
+        <span class="tag"><i></i>Agentic scam checker · Built for Africa</span>
+        <h1 class="display"><span class="serif">Don't guess,</span><br><span class="x">just check.</span></h1>
+        <p class="heroSub">Forward a suspicious message. An AI agent investigates it and replies with a verdict and real evidence — in English, Pidgin, Yoruba, Hausa or Igbo.</p>
+        <div class="ctaRow"><a class="btn primary big" href="#demo">Try the live demo</a><a class="btn ghost big" id="waitlist2" href="#">Join the waitlist</a></div>
+        <div class="avail">Works on WhatsApp · Try it in your browser below</div>
+      </article>
+      <article class="ch" data-ch="1"><span class="chLabel"><b>01</b>Receive</span>
+        <h2>It looks like good news.</h2><p>A message promises big returns, fast. Most people have only a few seconds to decide.</p></article>
+      <article class="ch" data-ch="2"><span class="chLabel"><b>02</b>Read</span>
+        <h2>Xvimo reads it in about a second.</h2><p>NVIDIA Nemotron Nano spots the red flags and decides whether it needs a closer look.</p></article>
+      <article class="ch" data-ch="3"><span class="chLabel"><b>03</b>Check</span>
+        <h2>Then it checks what it can't see.</h2><p>A Nemotron Ultra agent searches the web and Nigerian regulator sites, and cites only sources it actually opened.</p></article>
+      <article class="ch" data-ch="4"><span class="chLabel"><b>04</b>Decide</span>
+        <h2>A clear answer, with the evidence.</h2><p>On WhatsApp or right here in your browser.</p>
+        <div class="ctaRow" style="margin-top:20px"><a class="btn primary big" href="#demo">Check a message now</a></div></article>
+    </div>
+
+    <div class="cards" aria-hidden="true">
+      <div class="card" data-ch="1"><div class="k"><span>WhatsApp · unknown number</span><span>9:41 PM</span></div>
+        <div class="bubble">Invest ₦50,000 today and earn ₦200,000 every week. Only 10 slots left — pay now to secure your slot!<small>9:41 PM</small></div></div>
+      <div class="card" data-ch="2"><div class="k"><span>Nemotron Nano · triage</span><span>~1 s</span></div>
+        <div class="flags"><span>Guaranteed weekly returns</span><span>"Only 10 slots"</span><span>Pay now</span></div>
+        <div class="route">Routing: <b>looks like a scam</b> — the agent double-checks.</div></div>
+      <div class="card" data-ch="3"><div class="k"><span>Nemotron Ultra · agent</span><span>Tavily search</span></div>
+        <ul class="srch"><li><i></i>Searching Nigerian regulator sites…</li><li><i></i>Searching the web for this scheme…</li></ul>
+        <div class="cardNote">Only links it actually retrieved can be cited.</div></div>
+      <div class="card" data-ch="4"><div class="k"><span>Verdict</span><span>Nano → Ultra agent</span></div>
+        <div class="verdictBig">🚨 Likely scam</div>
+        <p class="reply">Promises 300% a week and pushes you to pay now. No real investment pays like that. Don't send money.</p>
+        <div class="illus">Illustration · try a real check below ↓</div></div>
+    </div>
+
+    <ol class="chIndex" aria-hidden="true"><li data-ch="1">Receive</li><li data-ch="2">Read</li><li data-ch="3">Check</li><li data-ch="4">Decide</li></ol>
+    <div class="scrollHint" id="scrollHint">Scroll</div>
+    <div class="progress" id="storyProgress"></div>
+    <div class="endFade" id="endFade"></div>
+  </div>
+</section>
+
+<header class="hero heroBelow" id="results">
+  <div class="statRow">
     <div class="float f1"><b>~1 s</b><span>Nemotron Nano triage</span></div>
     <div class="float f2"><b>97.6%</b><span>scams caught · 330-message benchmark</span><div class="bar"></div></div>
     <div class="float f3"><b>~55%</b><span>answered by the small model alone</span></div>
     <div class="float f4"><b>5</b><span>open models benchmarked</span></div>
   </div>
 
-  <div>
-    <div class="ribbonWrap" id="how" aria-label="Xvimo tech stack">
-      <span class="verdictChip" id="vchip">Nemotron 3 Nano · triage in ~2.7 s</span>
-      <svg class="ribbon" viewBox="0 0 1440 170" preserveAspectRatio="xMidYMid slice">
+  <section class="orbitSec" id="how" aria-label="How Xvimo's tools work together">
+    <div class="orbitHead"><span class="eyebrow">The pipeline</span>
+      <h2>One message, five open tools, one answer.</h2></div>
+    <div class="orbit" id="orbit">
+      <svg class="orbitSvg" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="true">
         <defs>
-          <path id="rpath" d="M-60 120 C 240 40, 420 40, 720 100 S 1180 160, 1500 70"/>
-          <clipPath id="clipL"><rect x="-100" y="0" width="820" height="170"/></clipPath>
-          <clipPath id="clipR"><rect x="720" y="0" width="900" height="170"/></clipPath>
+          <linearGradient id="orbG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#40C9DA"/><stop offset="1" stop-color="#5BD896"/></linearGradient>
+          <filter id="orbGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+          <path id="orbPath" d="M500 50 A 430 230 0 1 1 499.9 50"/>
         </defs>
-        <use href="#rpath" class="bandEdge"/><use href="#rpath" class="band"/>
-        <g clip-path="url(#clipL)"><text class="raw"><textPath href="#rpath" id="tpRaw"></textPath></text></g>
-        <g clip-path="url(#clipR)"><text class="checked"><textPath href="#rpath" id="tpChk"></textPath></text></g>
-        <g class="scanner" transform="translate(720 100)">
-          <rect class="body" x="-46" y="-30" width="92" height="60" rx="30"/>
-          <g id="wave"></g>
-        </g>
+        <ellipse class="ring ringOuter" cx="500" cy="280" rx="455" ry="252"/>
+        <ellipse class="ring" cx="500" cy="280" rx="430" ry="230"/>
+        <path class="trail" id="orbTrail" d=""/>
+        <circle class="comet glow" id="orbGlowDot" r="16" filter="url(#orbGlow)"/>
+        <circle class="comet" id="orbDot" r="7"/>
       </svg>
+      <div class="core">
+        <img src="/favicon.svg" alt="" width="56" height="56">
+        <div class="coreStep" id="coreStep">A message arrives</div>
+        <div class="coreSub" id="coreSub">On WhatsApp or the web demo</div>
+        <div class="corePill"><img src="/brand/nebius.png" alt="Nebius" width="64" height="32">Token Factory</div>
+      </div>
+      <div class="onode" data-n="0"><img src="/brand/whatsapp.png" alt="WhatsApp" width="104" height="52"><b>WhatsApp</b><span>Message in, verdict out</span></div>
+      <div class="onode" data-n="1"><img src="/brand/minicpm.png" alt="MiniCPM-V" width="104" height="52"><b>MiniCPM-V</b><span>Reads screenshots</span></div>
+      <div class="onode" data-n="2"><img src="/brand/nvidia.png" alt="NVIDIA" width="104" height="52"><b>Nemotron 3 Nano</b><span>Triage in ~1 s</span></div>
+      <div class="onode" data-n="3"><img src="/brand/nvidia.png" alt="NVIDIA" width="104" height="52"><b>Nemotron 3 Ultra</b><span>Investigator agent</span></div>
+      <div class="onode" data-n="4"><img src="/brand/tavily.png" alt="Tavily" width="104" height="52"><b>Tavily</b><span>Web + regulator search</span></div>
     </div>
-    <div class="built"><span>Built with</span>
-      <figure><img src="/brand/nvidia.png" alt="NVIDIA" width="104" height="52"><figcaption>Nemotron Nano + Ultra</figcaption></figure>
-      <figure><img src="/brand/nebius.png" alt="Nebius" width="104" height="52"><figcaption>Token Factory</figcaption></figure>
-      <figure><img src="/brand/minicpm.png" alt="MiniCPM-V" width="104" height="52"><figcaption>Screenshots</figcaption></figure>
-      <figure><img src="/brand/tavily.png" alt="Tavily" width="104" height="52"><figcaption>Web search</figcaption></figure>
-      <figure><img src="/brand/whatsapp.png" alt="WhatsApp" width="104" height="52"><figcaption>Channel</figcaption></figure>
-    </div>
-  </div>
+  </section>
 </header>
 
 <div class="wrap" id="demo">
@@ -363,40 +515,97 @@
   if (VISITOR) fetch("/demo/visit", { method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ visitor: VISITOR, source: SOURCE }) }).catch(() => {});
 
-  /* ---------- hero ribbon: scam messages flowing through the scanner ---------- */
-  (function ribbon() {
-    const LINES = ["NVIDIA Nemotron 3 Nano — triage", "NVIDIA Nemotron 3 Ultra — investigator agent",
-      "Nebius Token Factory — inference", "MiniCPM-V — screenshot reading", "Tavily — web + regulator search", "Native tool calling",
-      "Verified citations", "WhatsApp via 360dialog", "Python · FastAPI", "Live streaming agent trace",
-      "300-message labelled benchmark"];
-    const VERDICTS = [["Nemotron 3 Nano · triage in ~2.7 s", "safe"], ["Nemotron 3 Ultra · agent with tool calling", "safe"],
-      ["Nebius Token Factory · Nano at $0.06 / 1M tokens", "safe"], ["Tavily · regulator-only search", "safe"], ["MiniCPM-V on Nebius · reads screenshots", "safe"],
-      ["Tiered routing · ~70% answered by Nano", "safe"], ["WhatsApp · live via 360dialog", "safe"]];
-    const text = LINES.join("      ◆      ") + "      ◆      ";
-    const raw = $("tpRaw"), chk = $("tpChk");
-    raw.textContent = chk.textContent = text + text;
-    // scanner "waveform"
-    const wave = $("wave"); const bars = [];
-    for (let i = 0; i < 9; i++) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      r.setAttribute("class", "wave"); r.setAttribute("x", -26 + i * 6.5); r.setAttribute("width", 3.4); r.setAttribute("rx", 1.7);
-      wave.appendChild(r); bars.push(r); }
-    const setBars = t => bars.forEach((b, i) => { const h = 6 + 16 * Math.abs(Math.sin(t / 260 + i * .8));
-      b.setAttribute("height", h); b.setAttribute("y", -h / 2); });
-    const chip = $("vchip"); let vi = 0;
-    function nextVerdict() {
-      chip.classList.add("hide");
-      setTimeout(() => { const [txt, tone] = VERDICTS[vi++ % VERDICTS.length]; chip.textContent = txt;
-        chip.className = "verdictChip" + (tone === "risk" ? " risk" : ""); }, 380);
+
+  /* ---------- scroll-driven story hero ---------- */
+  (function story() {
+    const N = 78, sec = $("story"), cv = $("heroCanvas"), ctx = cv.getContext("2d");
+    const small = innerWidth < 760 || (navigator.connection && navigator.connection.saveData);
+    const set = small ? "sm" : "lg", focal = small ? 0.5 : 0.62;
+    const frames = new Array(N); let want = 0, shown = -1, cur = 0;
+    const pad = i => String(i).padStart(3, "0");
+    function load(i) { if (frames[i]) return; const im = new Image(); im.decoding = "async";
+      im.onload = () => { frames[i] = im; if (shown < 0 || Math.abs(i - cur) < 1) draw(true); }; im.src = `/hero/${set}/${pad(i)}.webp`; frames[i] = null; }
+    function nearest(i) { for (let d = 0; d < N; d++) { if (frames[i - d]) return frames[i - d]; if (frames[i + d]) return frames[i + d]; } return null; }
+    function size() { const dpr = Math.min(devicePixelRatio || 1, 2); cv.width = Math.round(cv.clientWidth * dpr); cv.height = Math.round(cv.clientHeight * dpr); draw(true); }
+    function draw(force) {
+      const i = Math.round(cur); if (!force && i === shown) return;
+      const im = nearest(i); if (!im) return; shown = i;
+      const s = Math.max(cv.width / im.width, cv.height / im.height), w = im.width * s, h = im.height * s;
+      const x = Math.min(0, Math.max(cv.width - w, cv.width / 2 - w * focal)), y = (cv.height - h) / 2;
+      const blur = Math.max(0, (i - 44) / (N - 45)) * 1.8;
+      ctx.filter = `brightness(1.28) contrast(1.04) saturate(1.05)${blur ? ` blur(${blur.toFixed(2)}px)` : ""}`;
+      ctx.drawImage(im, x, y, w, h); ctx.filter = "none";
     }
-    if (reduce) { setBars(0); return; }
-    const half = raw.getComputedTextLength() / 2; let off = 0, last = performance.now();
-    (function frame(now) {
-      off -= (now - last) * 0.06; last = now;
-      if (-off > half) off += half;
-      raw.setAttribute("startOffset", off); chk.setAttribute("startOffset", off); setBars(now);
+    const chs = [...document.querySelectorAll(".ch")], cards = [...document.querySelectorAll(".card")], idx = [...document.querySelectorAll(".chIndex li")];
+    let active = -1;
+    function update() {
+      const r = sec.getBoundingClientRect(), total = sec.offsetHeight - innerHeight;
+      const p = Math.min(1, Math.max(0, -r.top / total));
+      want = p * (N - 1);
+      const c = Math.min(4, Math.floor(p * 5.0001));
+      if (c !== active) { active = c;
+        chs.forEach(el => el.classList.toggle("on", +el.dataset.ch === c));
+        cards.forEach(el => el.classList.toggle("on", +el.dataset.ch === c));
+        idx.forEach(el => el.classList.toggle("on", +el.dataset.ch === c));
+      }
+      $("storyProgress").style.transform = `scaleX(${p})`;
+      const end = Math.min(1, Math.max(0, (p - 0.9) / 0.1));   // dissolve the scene into the page at the end
+      $("endFade").style.opacity = end; $("storyProgress").style.opacity = 1 - end;
+      $("scrollHint").classList.toggle("gone", p > 0.02);
+    }
+    function tick() { cur += (want - cur) * (reduce ? 1 : 0.18); draw(); requestAnimationFrame(tick); }
+    load(0); load(N - 1);
+    addEventListener("load", () => { for (let i = 1; i < N - 1; i++) load(i); });
+    addEventListener("scroll", update, { passive: true }); addEventListener("resize", () => { size(); update(); });
+    size(); update(); tick();
+  })();
+
+  /* ---------- orbit pipeline: a message travels through each tool and back ---------- */
+  (function orbit() {
+    const box = $("orbit"), svg = box.querySelector("svg"), nodes = [...box.querySelectorAll(".onode")];
+    const STEPS = [["A message arrives", "On WhatsApp or the web demo"], ["Screenshot read", "MiniCPM-V turns the image into text"],
+      ["Triage in ~1 s", "Clear cases are answered right away"], ["Agent investigates", "It decides what needs verifying"],
+      ["Evidence found", "Web and Nigerian regulator search"], ["Verdict sent back", "With the reasons and the sources"]];
+    const CX = 500, CY = 280, RX = 430, RY = 230, N = 5;
+    const ang = i => -Math.PI / 2 + i * 2 * Math.PI / N;                 // clockwise from the top
+    const pt = a => [CX + RX * Math.cos(a), CY + RY * Math.sin(a)];
+    function place() {
+      const mobile = innerWidth < 760, ry = mobile ? 330 : RY, cy = mobile ? 410 : CY, vbH = mobile ? 820 : 560;
+      svg.setAttribute("viewBox", `0 0 1000 ${vbH}`);
+      svg.querySelectorAll("ellipse").forEach((e, k) => { e.setAttribute("cy", cy); e.setAttribute("ry", ry + (k === 0 ? 22 : 0)); });
+      nodes.forEach((n, i) => { const a = ang(i); n.style.left = (CX + RX * Math.cos(a)) / 10 + "%"; n.style.top = (cy + ry * Math.sin(a)) / vbH * 100 + "%"; });
+      return { ry, cy };
+    }
+    let geo = place(); addEventListener("resize", () => { geo = place(); });
+    const P = a => [CX + RX * Math.cos(a), geo.cy + geo.ry * Math.sin(a)];
+    const core = box.querySelector(".core");
+    function say(k) { core.classList.add("swap"); setTimeout(() => { $("coreStep").textContent = STEPS[k][0]; $("coreSub").textContent = STEPS[k][1]; core.classList.remove("swap"); }, 260); }
+    if (reduce) { nodes.forEach(n => n.classList.add("done")); return; }
+    const dot = $("orbDot"), glow = $("orbGlowDot"), trail = $("orbTrail");
+    const HOLD = 1100, MOVE = 1300;                                          // ms at each node, ms between nodes
+    let running = false, t0 = 0, lastSeg = -1;
+    new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !running) { running = true; t0 = performance.now(); requestAnimationFrame(frame); } }),
+      { threshold: .25 }).observe(box);
+    function frame(now) {
+      const cyc = (HOLD + MOVE) * N + 1600, t = (now - t0) % cyc;
+      const seg = Math.min(N, Math.floor(t / (HOLD + MOVE))), u = t - seg * (HOLD + MOVE);
+      let a, from = ang(seg);
+      if (seg >= N) { a = ang(0) + 2 * Math.PI; }                           // resting back at WhatsApp
+      else if (u < HOLD) a = from;
+      else { const k = (u - HOLD) / MOVE, e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; a = from + e * 2 * Math.PI / N; }
+      const [x, y] = P(a); dot.setAttribute("cx", x); dot.setAttribute("cy", y); glow.setAttribute("cx", x); glow.setAttribute("cy", y);
+      // comet tail: a short arc behind the message
+      let d = ""; for (let j = 0; j <= 14; j++) { const [tx, ty] = P(a - j * 0.028); d += (j ? " L" : "M") + tx.toFixed(1) + " " + ty.toFixed(1); }
+      trail.setAttribute("d", d); trail.style.opacity = (seg < N && u >= HOLD) ? .9 : .25;
+      const at = seg >= N ? 0 : (u < HOLD ? seg : -1);
+      const key = seg * 2 + (u < HOLD ? 0 : 1);
+      if (key !== lastSeg) { lastSeg = key;
+        nodes.forEach((n, i) => { n.classList.toggle("hit", i === at); n.classList.toggle("done", seg >= N ? true : i < seg || (i === seg && u >= HOLD)); });
+        if (at >= 0) say(seg >= N ? 5 : seg);
+        if (seg === 0 && u < HOLD) nodes.forEach(n => n.classList.remove("done"));
+      }
       requestAnimationFrame(frame);
-    })(last);
-    setInterval(nextVerdict, 3200);
+    }
   })();
   $("chips").innerHTML = EXAMPLES.map(([l], i) => `<button class="chip" type="button" data-i="${i}">${esc(l)}</button>`).join("");
   $("chips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) { $("msg").value = EXAMPLES[b.dataset.i][1]; count(); } });

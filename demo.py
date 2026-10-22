@@ -236,6 +236,18 @@ for _name in ICON_TYPES:
     router.add_api_route(f"/{_name}", (lambda n=_name: _icon(n)), methods=["GET"], include_in_schema=False)
 
 
+HERO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "hero")
+
+
+@router.get("/hero/{size}/{name}", include_in_schema=False)
+def hero_frame(size: str, name: str):
+    """Scroll-driven hero image sequence (assets/hero/lg|sm/NNN.webp)."""
+    path = os.path.join(HERO_DIR, size, name)
+    if size not in ("lg", "sm") or not re.fullmatch(r"\d{3}\.webp", name) or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(path, media_type="image/webp", headers={"Cache-Control": "public, max-age=604800, immutable"})
+
+
 @router.get("/privacy", response_class=HTMLResponse)
 def privacy_page():
     with open(PRIVACY_PATH, encoding="utf-8") as f:
