@@ -282,7 +282,7 @@ xvimo/
 - [x] NaijaScamBench published on Hugging Face (180 messages)
 - [ ] Final benchmark on the revised agent, including new unseen messages
 - [ ] Native-speaker review and more Yoruba, Hausa and Igbo messages
-- [ ] Demo video and Devpost submission
+- [x] Demo video and Devpost submission
 
 ## License
 
